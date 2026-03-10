@@ -1,8 +1,8 @@
 export default function Footer() {
   return (
-    <footer className="bg-gray-800 text-white py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        <p>&copy; 2023 My App. All rights reserved.</p>
+    <footer className="border-t mt-10">
+      <div className="max-w-6xl mx-auto px-4 py-6 text-center">
+        © 2026 My Portfolio
       </div>
     </footer>
   );

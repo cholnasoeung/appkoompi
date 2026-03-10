@@ -1,15 +1,8 @@
-import Navbar from "../components/Navbar";
-import HeroSection from "../components/HeroSection";
-import CardSection from "../components/CardSection";
-import Footer from "../components/Footer";
-
-export default function Home() {
+export default function HomePage() {
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
-      <HeroSection />
-      <CardSection />
-      <Footer />
-    </div>
+    <main className="p-8">
+      <h1 className="text-4xl font-bold">Home</h1>
+      <p className="mt-4">Welcome to my portfolio site.</p>
+    </main>
   );
 }
