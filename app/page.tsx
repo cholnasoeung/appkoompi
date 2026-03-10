@@ -2,7 +2,7 @@ export default function HomePage() {
   return (
     <main className="p-8">
       <h1 className="text-4xl font-bold">Home</h1>
-      <p className="mt-4">Welcome to my portfolio site.</p>
+      <p className="mt-4">Welcome to my portfolio sites.</p>
     </main>
   );
 }
