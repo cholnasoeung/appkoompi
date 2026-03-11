@@ -1,10 +1,10 @@
 import TaskManager from "@/components/TaskManager";
-import { getTasks } from "@/lib/tasks";
+import { getTasks, type TaskItem } from "@/lib/tasks";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  let initialTasks = [];
+  let initialTasks: TaskItem[] = [];
   let initialError: string | undefined;
 
   try {
