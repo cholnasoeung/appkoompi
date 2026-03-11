@@ -1,12 +1,10 @@
 import { connectToDatabase } from "@/lib/mongodb";
 import Task from "@/models/Task";
+import { getTasks, serializeTask, TaskPriority } from "@/lib/tasks";
 
 export async function GET() {
   try {
-    await connectToDatabase();
-
-    const tasks = await Task.find().sort({ createdAt: -1 });
-
+    const tasks = await getTasks();
     return Response.json(tasks, { status: 200 });
   } catch (error) {
     return Response.json(
@@ -21,17 +19,26 @@ export async function POST(request: Request) {
     await connectToDatabase();
 
     const body = await request.json();
+    const title = typeof body.title === "string" ? body.title.trim() : "";
+    const priority = body.priority as TaskPriority | undefined;
+
+    if (title.length < 3) {
+      return Response.json(
+        { message: "Title must be at least 3 characters" },
+        { status: 400 }
+      );
+    }
 
     const newTask = await Task.create({
-      title: body.title,
+      title,
       completed: body.completed ?? false,
-      priority: body.priority ?? "medium",
+      priority: priority ?? "medium",
     });
 
     return Response.json(
       {
         message: "Task created successfully",
-        task: newTask,
+        task: serializeTask(newTask),
       },
       { status: 201 }
     );

@@ -1,46 +1,37 @@
 export default function AboutPage() {
   return (
-    <main className="min-h-screen bg-gray-50 px-6 py-12 sm:px-10 lg:px-20">
-      <section className="mx-auto max-w-4xl rounded-2xl bg-white p-8 shadow-md sm:p-10">
-        <p className="text-sm font-semibold uppercase tracking-widest text-blue-600">
-          About Me
+    <main className="min-h-screen bg-[linear-gradient(180deg,_#f8fafc_0%,_#eef4ff_100%)] px-6 py-12 sm:px-10 lg:px-16">
+      <section className="mx-auto max-w-5xl rounded-[2rem] border border-slate-200 bg-white p-8 shadow-[0_20px_60px_rgba(15,23,42,0.08)] sm:p-10">
+        <p className="text-sm font-semibold uppercase tracking-[0.22em] text-sky-700">
+          About This Project
         </p>
 
-        <h1 className="mt-3 text-4xl font-bold text-gray-900 sm:text-5xl">
-          Learn more about who I am
+        <h1 className="mt-4 text-4xl font-black tracking-[-0.04em] text-slate-950 sm:text-5xl">
+          CRUD tasks with server-rendered data and optimistic client updates.
         </h1>
 
-        <p className="mt-6 text-lg leading-8 text-gray-600">
-          I am learning Next.js, React, and Tailwind CSS while building modern,
-          responsive websites. This portfolio is part of my journey to improve
-          my frontend development skills and create real projects for practice.
+        <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-600">
+          This app demonstrates a practical Next.js App Router setup using
+          MongoDB and Mongoose for persistence, API route handlers for mutations,
+          controlled React forms, and a basic route-level error boundary.
         </p>
 
-        <div className="mt-8 grid gap-6 sm:grid-cols-2">
-          <div className="rounded-xl border border-gray-200 bg-gray-50 p-6">
-            <h2 className="text-xl font-semibold text-gray-900">My Goal</h2>
-            <p className="mt-3 text-gray-600">
-              My goal is to become confident in building clean, responsive, and
-              user-friendly web applications using modern tools.
+        <div className="mt-10 grid gap-6 md:grid-cols-2">
+          <div className="rounded-3xl bg-slate-950 p-6 text-white">
+            <h2 className="text-2xl font-bold">Data fetching</h2>
+            <p className="mt-4 leading-7 text-slate-300">
+              The home page loads tasks in a server component, then the client
+              component uses `fetch` for create, update, and delete requests.
             </p>
           </div>
 
-          <div className="rounded-xl border border-gray-200 bg-gray-50 p-6">
-            <h2 className="text-xl font-semibold text-gray-900">What I’m Learning</h2>
-            <p className="mt-3 text-gray-600">
-              I am practicing App Router, reusable components, Tailwind layout,
-              GitHub workflow, and deployment with Vercel.
+          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6">
+            <h2 className="text-2xl font-bold text-slate-950">UI behavior</h2>
+            <p className="mt-4 leading-7 text-slate-600">
+              The task list updates optimistically before the network request
+              resolves, then rolls back if the API returns an error.
             </p>
           </div>
-        </div>
-
-        <div className="mt-10">
-          <a
-            href="/projects"
-            className="inline-block rounded-lg bg-blue-600 px-6 py-3 font-medium text-white transition hover:bg-blue-700"
-          >
-            View My Projects
-          </a>
         </div>
       </section>
     </main>

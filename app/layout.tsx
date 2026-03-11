@@ -3,8 +3,9 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
 export const metadata = {
-  title: "My Portfolio",
-  description: "Personal portfolio site",
+  title: "Task Manager",
+  description:
+    "Full CRUD task manager with Next.js, MongoDB, Tailwind CSS, optimistic UI, and server-rendered data fetching",
 };
 
 export default function RootLayout({
