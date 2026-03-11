@@ -104,27 +104,45 @@
 
 
 import mongoose from "mongoose";
+import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Task from "@/models/Task";
-import { serializeTask } from "@/lib/tasks";
-import type { TaskPriority } from "@/lib/tasks";
+
+type TaskPriority = "low" | "medium" | "high";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
 function invalidIdResponse() {
-  return Response.json({ message: "Invalid task id" }, { status: 400 });
+  return NextResponse.json({ message: "Invalid task id" }, { status: 400 });
+}
+
+function serializeTask(task: any) {
+  return {
+    _id: task._id.toString(),
+    title: task.title,
+    completed: task.completed,
+    priority: task.priority,
+    createdAt:
+      task.createdAt instanceof Date
+        ? task.createdAt.toISOString()
+        : task.createdAt,
+    updatedAt:
+      task.updatedAt instanceof Date
+        ? task.updatedAt.toISOString()
+        : task.updatedAt,
+  };
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
-  const { id } = await context.params;
-
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    return invalidIdResponse();
-  }
-
   try {
+    const { id } = await context.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return invalidIdResponse();
+    }
+
     await connectToDatabase();
 
     const body = await request.json();
@@ -139,7 +157,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       const title = body.title.trim();
 
       if (title.length < 3) {
-        return Response.json(
+        return NextResponse.json(
           { message: "Title must be at least 3 characters" },
           { status: 400 }
         );
@@ -165,10 +183,10 @@ export async function PATCH(request: Request, context: RouteContext) {
     });
 
     if (!task) {
-      return Response.json({ message: "Task not found" }, { status: 404 });
+      return NextResponse.json({ message: "Task not found" }, { status: 404 });
     }
 
-    return Response.json(
+    return NextResponse.json(
       {
         message: "Task updated successfully",
         task: serializeTask(task),
@@ -176,7 +194,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       { status: 200 }
     );
   } catch (error) {
-    return Response.json(
+    return NextResponse.json(
       {
         message: "Failed to update task",
         error: error instanceof Error ? error.message : "Unknown error",
@@ -187,27 +205,27 @@ export async function PATCH(request: Request, context: RouteContext) {
 }
 
 export async function DELETE(_request: Request, context: RouteContext) {
-  const { id } = await context.params;
-
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    return invalidIdResponse();
-  }
-
   try {
+    const { id } = await context.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return invalidIdResponse();
+    }
+
     await connectToDatabase();
 
     const deletedTask = await Task.findByIdAndDelete(id);
 
     if (!deletedTask) {
-      return Response.json({ message: "Task not found" }, { status: 404 });
+      return NextResponse.json({ message: "Task not found" }, { status: 404 });
     }
 
-    return Response.json(
+    return NextResponse.json(
       { message: "Task deleted successfully" },
       { status: 200 }
     );
   } catch (error) {
-    return Response.json(
+    return NextResponse.json(
       {
         message: "Failed to delete task",
         error: error instanceof Error ? error.message : "Unknown error",
