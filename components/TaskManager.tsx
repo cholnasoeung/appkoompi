@@ -7,7 +7,7 @@ type Filter = "all" | "active" | "completed";
 
 type TaskManagerProps = {
   initialTasks: TaskItem[];
-  initialError?: string;
+  initialError?: string | null;
 };
 
 const priorityStyles: Record<TaskPriority, string> = {
