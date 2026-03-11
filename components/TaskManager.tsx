@@ -7,6 +7,7 @@ type Filter = "all" | "active" | "completed";
 
 type TaskManagerProps = {
   initialTasks: TaskItem[];
+  initialError?: string;
 };
 
 const priorityStyles: Record<TaskPriority, string> = {
@@ -31,7 +32,10 @@ function sortTasks(tasks: TaskItem[]) {
   });
 }
 
-export default function TaskManager({ initialTasks }: TaskManagerProps) {
+export default function TaskManager({
+  initialTasks,
+  initialError = null,
+}: TaskManagerProps) {
   const [tasks, setTasks] = useState<TaskItem[]>(sortTasks(initialTasks));
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState<TaskPriority>("medium");
@@ -39,7 +43,7 @@ export default function TaskManager({ initialTasks }: TaskManagerProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
   const [editingPriority, setEditingPriority] = useState<TaskPriority>("medium");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(initialError);
   const [isPending, startTransition] = useTransition();
 
   const visibleTasks = useMemo(() => {
