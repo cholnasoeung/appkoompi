@@ -1,6 +1,13 @@
 "use client";
 
-import { FormEvent, useMemo, useState, useTransition } from "react";
+import {
+  FormEvent,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { TaskItem, TaskPriority } from "@/lib/tasks";
 
 type Filter = "all" | "active" | "completed";
@@ -22,6 +29,8 @@ const priorityOrder: Record<TaskPriority, number> = {
   low: 2,
 };
 
+const TASKS_PER_PAGE = 5;
+
 function sortTasks(tasks: TaskItem[]) {
   return [...tasks].sort((first, second) => {
     if (first.completed !== second.completed) {
@@ -36,29 +45,68 @@ export default function TaskManager({
   initialTasks,
   initialError = null,
 }: TaskManagerProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const [tasks, setTasks] = useState<TaskItem[]>(sortTasks(initialTasks));
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState<TaskPriority>("medium");
-  const [filter, setFilter] = useState<Filter>("all");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
   const [editingPriority, setEditingPriority] = useState<TaskPriority>("medium");
   const [error, setError] = useState<string | null>(initialError);
   const [isPending, startTransition] = useTransition();
 
-  const visibleTasks = useMemo(() => {
-    return tasks.filter((task) => {
-      if (filter === "active") {
-        return !task.completed;
-      }
+  // URL query parameters
+  const filter = (searchParams.get("filter") as Filter) || "all";
+  const search = searchParams.get("search") || "";
+  const currentPage = Number(searchParams.get("page")) || 1;
 
-      if (filter === "completed") {
-        return task.completed;
-      }
+  const [searchInput, setSearchInput] = useState(search);
 
-      return true;
+  useEffect(() => {
+    setSearchInput(search);
+  }, [search]);
+
+  function updateQueryParams(params: Record<string, string | number | null>) {
+    const current = new URLSearchParams(searchParams.toString());
+
+    Object.entries(params).forEach(([key, value]) => {
+      if (value === null || value === "" || value === "all") {
+        current.delete(key);
+      } else {
+        current.set(key, String(value));
+      }
     });
-  }, [filter, tasks]);
+
+    router.push(`${pathname}?${current.toString()}`);
+  }
+
+  const filteredTasks = useMemo(() => {
+    return tasks.filter((task) => {
+      const matchesFilter =
+        filter === "all"
+          ? true
+          : filter === "active"
+          ? !task.completed
+          : task.completed;
+
+      const matchesSearch = task.title
+        .toLowerCase()
+        .includes(search.toLowerCase());
+
+      return matchesFilter && matchesSearch;
+    });
+  }, [tasks, filter, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredTasks.length / TASKS_PER_PAGE));
+
+  const paginatedTasks = useMemo(() => {
+    const start = (currentPage - 1) * TASKS_PER_PAGE;
+    const end = start + TASKS_PER_PAGE;
+    return filteredTasks.slice(start, end);
+  }, [filteredTasks, currentPage]);
 
   const stats = useMemo(() => {
     const completed = tasks.filter((task) => task.completed).length;
@@ -313,16 +361,6 @@ export default function TaskManager({
               Server + Client Data Flow
             </span>
 
-            <h1 className="mt-5 max-w-4xl text-4xl font-black tracking-[-0.05em] text-slate-950 sm:text-5xl">
-              Full CRUD task manager with Next.js, MongoDB, and Tailwind.
-            </h1>
-
-            <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
-              Initial tasks are rendered on the server, then form submissions and
-              task updates run through `fetch` calls with optimistic UI for a
-              faster experience on the client.
-            </p>
-
             <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <div className="rounded-3xl bg-slate-950 p-5 text-white shadow-lg shadow-slate-900/10">
                 <p className="text-xs uppercase tracking-[0.2em] text-slate-300">
@@ -410,9 +448,6 @@ export default function TaskManager({
                 >
                   {isPending ? "Saving..." : "Create Task"}
                 </button>
-                <p className="text-sm text-slate-500">
-                  Controlled form inputs with client-side validation.
-                </p>
               </div>
             </form>
 
@@ -424,7 +459,7 @@ export default function TaskManager({
           </div>
 
           <div className="overflow-hidden rounded-[2rem] border border-white/60 bg-white/80 p-6 shadow-[0_20px_80px_rgba(15,23,42,0.10)] ring-1 ring-slate-200/60 backdrop-blur-xl sm:p-8">
-            <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
                   Task Board
@@ -434,13 +469,51 @@ export default function TaskManager({
                 </h2>
               </div>
 
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <input
+                  type="text"
+                  placeholder="Search task..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      updateQueryParams({
+                        search: searchInput,
+                        page: 1,
+                      });
+                    }
+                  }}
+                  className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-950 shadow-sm outline-none transition duration-200 focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
+                />
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateQueryParams({
+                      search: searchInput,
+                      page: 1,
+                    })
+                  }
+                  className="rounded-full bg-sky-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-sky-600/20 hover:bg-sky-700"
+                >
+                  Search
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
               <div className="rounded-full border border-slate-200 bg-slate-50/80 p-1 shadow-sm">
                 <div className="flex flex-wrap gap-2">
                   {(["all", "active", "completed"] as Filter[]).map((option) => (
                     <button
                       key={option}
                       type="button"
-                      onClick={() => setFilter(option)}
+                      onClick={() =>
+                        updateQueryParams({
+                          filter: option,
+                          page: 1,
+                        })
+                      }
                       className={`rounded-full px-4 py-2 text-sm font-semibold capitalize transition duration-200 ${
                         filter === option
                           ? "bg-slate-950 text-white shadow-md"
@@ -452,21 +525,25 @@ export default function TaskManager({
                   ))}
                 </div>
               </div>
+
+              <p className="text-sm text-slate-500">
+                Showing {paginatedTasks.length} of {filteredTasks.length} tasks
+              </p>
             </div>
 
             <div className="mt-6 space-y-4">
-              {visibleTasks.length === 0 ? (
+              {paginatedTasks.length === 0 ? (
                 <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50/80 px-6 py-14 text-center">
                   <p className="text-lg font-semibold text-slate-800">
-                    No tasks in this view.
+                    No tasks found.
                   </p>
                   <p className="mt-2 text-sm text-slate-500">
-                    Add a task above or switch filters.
+                    Try another search or filter.
                   </p>
                 </div>
               ) : null}
 
-              {visibleTasks.map((task) => {
+              {paginatedTasks.map((task) => {
                 const isEditing = editingId === task._id;
 
                 return (
@@ -588,6 +665,40 @@ export default function TaskManager({
                   </article>
                 );
               })}
+            </div>
+
+            <div className="mt-8 flex flex-wrap items-center justify-between gap-4">
+              <div className="text-sm text-slate-600">
+                Page {currentPage} of {totalPages}
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  disabled={currentPage <= 1}
+                  onClick={() =>
+                    updateQueryParams({
+                      page: currentPage - 1,
+                    })
+                  }
+                  className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Previous
+                </button>
+
+                <button
+                  type="button"
+                  disabled={currentPage >= totalPages}
+                  onClick={() =>
+                    updateQueryParams({
+                      page: currentPage + 1,
+                    })
+                  }
+                  className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
             </div>
 
             <div className="mt-8 rounded-2xl border border-slate-200/80 bg-slate-50/90 p-4 text-sm text-slate-600 shadow-inner">
