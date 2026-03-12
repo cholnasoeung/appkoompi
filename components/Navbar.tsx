@@ -30,23 +30,29 @@ export default async function Navbar() {
           >
             Dashboard
           </Link>
+
           <Link
             href="/about"
             className="rounded-full px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
           >
             About
           </Link>
+
           {user ? (
             <div className="flex items-center gap-3 rounded-full border border-slate-200 bg-white px-3 py-2 shadow-sm">
               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-950 text-sm font-bold text-white">
                 {userLabel.slice(0, 1).toUpperCase()}
               </div>
+
               <div className="hidden min-w-0 sm:block">
                 <p className="truncate text-sm font-semibold text-slate-900">
                   {userLabel}
                 </p>
-                <p className="truncate text-xs text-slate-500">{user.email}</p>
+                <p className="truncate text-xs text-slate-500">
+                  {user.email}
+                </p>
               </div>
+
               <SignOutButton />
             </div>
           ) : (
@@ -57,6 +63,7 @@ export default async function Navbar() {
               >
                 Log in
               </Link>
+
               <Link
                 href="/register"
                 className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
@@ -65,6 +72,7 @@ export default async function Navbar() {
               </Link>
             </>
           )}
+
           <ThemeToggle />
         </div>
       </div>

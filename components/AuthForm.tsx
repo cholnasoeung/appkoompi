@@ -95,9 +95,9 @@ export default function AuthForm({
   const content = copy[mode];
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(14,165,233,0.14),_transparent_28%),linear-gradient(180deg,_#f8fafc_0%,_#e2e8f0_100%)] px-6 py-16">
-      <div className="mx-auto grid max-w-5xl gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-        <section className="rounded-[2rem] border border-white/70 bg-white/75 p-10 shadow-[0_24px_80px_rgba(15,23,42,0.12)] backdrop-blur-xl">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(14,165,233,0.14),_transparent_28%),linear-gradient(180deg,_#f8fafc_0%,_#e2e8f0_100%)] px-6 py-16 ">
+      <div className="mx-auto grid max-w-5xl place-items-center">
+        {/* <section className="rounded-[2rem] border border-white/70 bg-white/75 p-10 shadow-[0_24px_80px_rgba(15,23,42,0.12)] backdrop-blur-xl">
           <p className="text-xs font-bold uppercase tracking-[0.24em] text-sky-700">
             {content.eyebrow}
           </p>
@@ -132,9 +132,9 @@ export default function AuthForm({
               </p>
             </div>
           </div>
-        </section>
+        </section> */}
 
-        <section className="rounded-[2rem] border border-slate-200/70 bg-white p-8 shadow-xl shadow-slate-200/70">
+        <section className="rounded-[2rem] border border-slate-200/70 bg-white p-8 shadow-xl shadow-slate-200/70 place-itemes-center w-full max-w-md">
           {githubEnabled ? (
             <>
               <button
