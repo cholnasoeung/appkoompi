@@ -1,3 +1,4 @@
+import { auth } from "@/auth";
 import mongoose from "mongoose";
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
@@ -11,6 +12,27 @@ type RouteContext = {
 
 function invalidIdResponse() {
   return NextResponse.json({ message: "Invalid task id" }, { status: 400 });
+}
+
+async function findTaskForUser(id: string, userId: string) {
+  const ownedTask = await Task.findOne({ _id: id, userId });
+
+  if (ownedTask) {
+    return ownedTask;
+  }
+
+  const legacyTask = await Task.findOne({
+    _id: id,
+    $or: [{ userId: { $exists: false } }, { userId: null }, { userId: "" }],
+  });
+
+  if (!legacyTask) {
+    return null;
+  }
+
+  legacyTask.userId = userId;
+  await legacyTask.save();
+  return legacyTask;
 }
 
 function serializeTask(task: {
@@ -39,6 +61,12 @@ function serializeTask(task: {
 
 export async function PATCH(request: Request, context: RouteContext) {
   try {
+    const session = await auth();
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await context.params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -79,19 +107,19 @@ export async function PATCH(request: Request, context: RouteContext) {
       updateData.priority = body.priority as TaskPriority;
     }
 
-    const task = await Task.findByIdAndUpdate(id, updateData, {
-      new: true,
-      runValidators: true,
-    });
+    const existingTask = await findTaskForUser(id, session.user.id);
 
-    if (!task) {
+    if (!existingTask) {
       return NextResponse.json({ message: "Task not found" }, { status: 404 });
     }
+
+    existingTask.set(updateData);
+    await existingTask.save();
 
     return NextResponse.json(
       {
         message: "Task updated successfully",
-        task: serializeTask(task),
+        task: serializeTask(existingTask),
       },
       { status: 200 }
     );
@@ -108,6 +136,12 @@ export async function PATCH(request: Request, context: RouteContext) {
 
 export async function DELETE(_request: Request, context: RouteContext) {
   try {
+    const session = await auth();
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await context.params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -116,11 +150,13 @@ export async function DELETE(_request: Request, context: RouteContext) {
 
     await connectToDatabase();
 
-    const deletedTask = await Task.findByIdAndDelete(id);
+    const existingTask = await findTaskForUser(id, session.user.id);
 
-    if (!deletedTask) {
+    if (!existingTask) {
       return NextResponse.json({ message: "Task not found" }, { status: 404 });
     }
+
+    await existingTask.deleteOne();
 
     return NextResponse.json(
       { message: "Task deleted successfully" },

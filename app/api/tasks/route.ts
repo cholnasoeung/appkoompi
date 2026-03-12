@@ -1,10 +1,17 @@
+import { auth } from "@/auth";
 import { connectToDatabase } from "@/lib/mongodb";
 import Task from "@/models/Task";
 import { getTasks, serializeTask, TaskPriority } from "@/lib/tasks";
 
 export async function GET() {
   try {
-    const tasks = await getTasks();
+    const session = await auth();
+
+    if (!session?.user?.id) {
+      return Response.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    const tasks = await getTasks(session.user.id);
     return Response.json(tasks, { status: 200 });
   } catch (error) {
     return Response.json(
@@ -16,6 +23,12 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const session = await auth();
+
+    if (!session?.user?.id) {
+      return Response.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
     await connectToDatabase();
 
     const body = await request.json();
@@ -30,6 +43,7 @@ export async function POST(request: Request) {
     }
 
     const newTask = await Task.create({
+      userId: session.user.id,
       title,
       completed: body.completed ?? false,
       priority: priority ?? "medium",

@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface ITask extends Document {
+  userId: string;
   title: string;
   completed: boolean;
   priority: "low" | "medium" | "high";
@@ -10,6 +11,11 @@ export interface ITask extends Document {
 
 const TaskSchema = new Schema<ITask>(
   {
+    userId: {
+      type: String,
+      required: true,
+      index: true,
+    },
     title: {
       type: String,
       required: [true, "Title is required"],
@@ -32,7 +38,16 @@ const TaskSchema = new Schema<ITask>(
   }
 );
 
+TaskSchema.index({ userId: 1, createdAt: -1 });
+
+const existingTaskModel = mongoose.models.Task as Model<ITask> | undefined;
+
+if (existingTaskModel && !existingTaskModel.schema.path("userId")) {
+  delete mongoose.models.Task;
+}
+
 const Task: Model<ITask> =
-  mongoose.models.Task || mongoose.model<ITask>("Task", TaskSchema);
+  (mongoose.models.Task as Model<ITask>) ||
+  mongoose.model<ITask>("Task", TaskSchema);
 
 export default Task;

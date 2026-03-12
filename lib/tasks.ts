@@ -30,10 +30,37 @@ export function serializeTask(task: {
   };
 }
 
-export async function getTasks() {
+export async function getTasks(userId: string) {
   await connectToDatabase();
 
-  const tasks = await Task.find().sort({ createdAt: -1 }).lean();
+  let tasks = await Task.find({ userId }).sort({ createdAt: -1 }).lean();
+
+  // Claim legacy tasks created before ownership was added so existing data
+  // remains editable after auth is enabled.
+  if (tasks.length === 0) {
+    const legacyTasks = await Task.find({
+      $or: [
+        { userId: { $exists: false } },
+        { userId: null },
+        { userId: "" },
+      ],
+    })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    if (legacyTasks.length > 0) {
+      await Task.updateMany(
+        {
+          _id: { $in: legacyTasks.map((task) => task._id) },
+        },
+        {
+          $set: { userId },
+        }
+      );
+
+      tasks = await Task.find({ userId }).sort({ createdAt: -1 }).lean();
+    }
+  }
 
   return tasks.map((task) =>
     serializeTask({

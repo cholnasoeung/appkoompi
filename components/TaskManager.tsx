@@ -72,7 +72,15 @@ export default function TaskManager({
   }, [tasks]);
 
   async function parseResponse(response: Response) {
-    const data = await response.json();
+    const contentType = response.headers.get("content-type") ?? "";
+    const data = contentType.includes("application/json")
+      ? await response.json()
+      : {
+          message:
+            response.status === 401
+              ? "Your session expired. Sign in again."
+              : "Unexpected server response.",
+        };
 
     if (!response.ok) {
       throw new Error(data.message ?? "Request failed");
@@ -111,6 +119,7 @@ export default function TaskManager({
       try {
         const response = await fetch("/api/tasks", {
           method: "POST",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
           },
@@ -176,6 +185,7 @@ export default function TaskManager({
       try {
         const response = await fetch(`/api/tasks/${task._id}`, {
           method: "PATCH",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
           },
@@ -234,6 +244,7 @@ export default function TaskManager({
       try {
         const response = await fetch(`/api/tasks/${task._id}`, {
           method: "PATCH",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
           },
@@ -278,6 +289,7 @@ export default function TaskManager({
       try {
         const response = await fetch(`/api/tasks/${task._id}`, {
           method: "DELETE",
+          credentials: "include",
         });
 
         await parseResponse(response);
