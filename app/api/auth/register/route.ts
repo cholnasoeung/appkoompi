@@ -10,6 +10,10 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
+function normalizeRole(role: unknown): "customer" | "admin" {
+  return role === "admin" ? "admin" : "customer";
+}
+
 export async function POST(request: Request) {
   try {
     const databaseConfigurationError = getDatabaseConfigurationError();
@@ -25,6 +29,7 @@ export async function POST(request: Request) {
     const name = typeof body.name === "string" ? body.name.trim() : "";
     const email = typeof body.email === "string" ? normalizeEmail(body.email) : "";
     const password = typeof body.password === "string" ? body.password : "";
+    const role = normalizeRole(body.role);
 
     if (name.length < 2) {
       return NextResponse.json(
@@ -63,12 +68,14 @@ export async function POST(request: Request) {
     if (existingUser) {
       existingUser.name = name;
       existingUser.passwordHash = passwordHash;
+      existingUser.role = role;
       await existingUser.save();
     } else {
       await User.create({
         name,
         email,
         passwordHash,
+        role,
       });
     }
 

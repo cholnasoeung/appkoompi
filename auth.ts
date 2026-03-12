@@ -67,6 +67,7 @@ let providers: NextAuthOptions["providers"] = [
         name: user.name,
         email: user.email,
         image: user.image ?? undefined,
+        role: user.role,
       };
     },
   }),
@@ -113,6 +114,7 @@ export const authOptions: NextAuthOptions = {
           name: user.name?.trim() || user.email.split("@")[0],
           email: normalizeEmail(user.email),
           image: user.image ?? null,
+          avatar: user.image ?? null,
           githubId: account.providerAccountId,
         },
         {
@@ -142,6 +144,7 @@ export const authOptions: NextAuthOptions = {
           token.name = dbUser.name;
           token.email = dbUser.email;
           token.picture = dbUser.image ?? undefined;
+          token.role = dbUser.role;
         }
       }
 
@@ -154,6 +157,7 @@ export const authOptions: NextAuthOptions = {
         session.user.email = token.email ?? "";
         session.user.image =
           typeof token.picture === "string" ? token.picture : null;
+        session.user.role = token.role;
       }
 
       return session;

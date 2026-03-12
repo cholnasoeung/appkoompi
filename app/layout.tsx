@@ -4,9 +4,9 @@ import Footer from "../components/Footer";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Task Manager",
+  title: "Cholna Store",
   description:
-    "Full CRUD task manager with Next.js, MongoDB, Tailwind CSS, optimistic UI, and server-rendered data fetching",
+    "Modern ecommerce storefront for curated products across home, workspace, and travel.",
 };
 
 export default function RootLayout({
@@ -14,7 +14,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className="bg-white text-black dark:bg-black dark:text-white">
+      <body className="bg-background text-foreground antialiased">
         <Navbar />
         {children}
         <Footer />

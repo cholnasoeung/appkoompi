@@ -47,6 +47,7 @@ export default function AuthForm({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState<"customer" | "admin">("customer");
 
   async function handleGitHubSignIn() {
     setError(null);
@@ -64,7 +65,7 @@ export default function AuthForm({
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ name, email, password }),
+          body: JSON.stringify({ name, email, password, role }),
         });
 
         const data = await response.json();
@@ -79,7 +80,7 @@ export default function AuthForm({
         email,
         password,
         redirect: false,
-        callbackUrl,
+        callbackUrl: mode === "register" && role === "admin" ? "/admin" : callbackUrl,
       });
 
       if (result?.error) {
@@ -160,21 +161,43 @@ export default function AuthForm({
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === "register" ? (
-              <div>
-                <label
-                  htmlFor="name"
-                  className="text-sm font-semibold text-slate-700"
-                >
-                  Name
-                </label>
-                <input
-                  id="name"
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
-                  placeholder="Your name"
-                />
-              </div>
+              <>
+                <div>
+                  <label
+                    htmlFor="name"
+                    className="text-sm font-semibold text-slate-700"
+                  >
+                    Name
+                  </label>
+                  <input
+                    id="name"
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
+                    placeholder="Your name"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="role"
+                    className="text-sm font-semibold text-slate-700"
+                  >
+                    Role
+                  </label>
+                  <select
+                    id="role"
+                    value={role}
+                    onChange={(event) =>
+                      setRole(event.target.value as "customer" | "admin")
+                    }
+                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
+                  >
+                    <option value="customer">Customer</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+              </>
             ) : null}
 
             <div>
