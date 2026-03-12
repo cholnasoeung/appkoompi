@@ -10,9 +10,26 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
+function hasRealEnvValue(value: string | undefined) {
+  if (!value) {
+    return false;
+  }
+
+  const normalizedValue = value.trim().toLowerCase();
+
+  return (
+    normalizedValue.length > 0 &&
+    !normalizedValue.startsWith("your_") &&
+    !normalizedValue.includes("client_id_here") &&
+    !normalizedValue.includes("client_secret_here")
+  );
+}
+
 const authSecret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET;
 const githubClientId = process.env.GITHUB_ID;
 const githubClientSecret = process.env.GITHUB_SECRET;
+export const githubAuthEnabled =
+  hasRealEnvValue(githubClientId) && hasRealEnvValue(githubClientSecret);
 
 let providers: NextAuthOptions["providers"] = [
   CredentialsProvider({
@@ -59,7 +76,7 @@ let providers: NextAuthOptions["providers"] = [
   }),
 ];
 
-if (githubClientId && githubClientSecret) {
+if (githubAuthEnabled && githubClientId && githubClientSecret) {
   providers = [
     GitHubProvider({
       clientId: githubClientId,

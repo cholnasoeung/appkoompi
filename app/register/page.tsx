@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+import { auth, githubAuthEnabled } from "@/auth";
 import AuthForm from "@/components/AuthForm";
 import { redirect } from "next/navigation";
 
@@ -23,9 +23,7 @@ export default async function RegisterPage({
     <AuthForm
       mode="register"
       callbackUrl={params.callbackUrl || "/"}
-      githubEnabled={Boolean(
-        process.env.GITHUB_ID && process.env.GITHUB_SECRET
-      )}
+      githubEnabled={githubAuthEnabled}
     />
   );
 }

@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+import { auth, githubAuthEnabled } from "@/auth";
 import AuthForm from "@/components/AuthForm";
 import { redirect } from "next/navigation";
 
@@ -31,9 +31,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       mode="login"
       callbackUrl={params.callbackUrl || "/"}
       initialError={getLoginError(params.error)}
-      githubEnabled={Boolean(
-        process.env.GITHUB_ID && process.env.GITHUB_SECRET
-      )}
+      githubEnabled={githubAuthEnabled}
     />
   );
 }

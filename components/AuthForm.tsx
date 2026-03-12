@@ -153,8 +153,8 @@ export default function AuthForm({
             </>
           ) : (
             <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-              GitHub login is disabled until `GITHUB_ID` and `GITHUB_SECRET`
-              are set.
+              GitHub login is disabled until real `GITHUB_ID` and
+              `GITHUB_SECRET` values are set in `.env.local`.
             </div>
           )}
 
