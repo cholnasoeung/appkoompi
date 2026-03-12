@@ -182,13 +182,14 @@ ProductSchema.index({ categoryId: 1, isActive: 1, createdAt: -1 });
 ProductSchema.index({ name: "text", description: "text", shortDescription: "text" });
 
 const existingProductModel = mongoose.models.Product as Model<IProduct> | undefined;
+const shouldRecompileProductModel =
+  process.env.NODE_ENV !== "production" ||
+  (existingProductModel &&
+    (!existingProductModel.schema.path("slug") ||
+      !existingProductModel.schema.path("sku") ||
+      !existingProductModel.schema.path("categoryId")));
 
-if (
-  existingProductModel &&
-  (!existingProductModel.schema.path("slug") ||
-    !existingProductModel.schema.path("sku") ||
-    !existingProductModel.schema.path("categoryId"))
-) {
+if (shouldRecompileProductModel && mongoose.models.Product) {
   delete mongoose.models.Product;
 }
 

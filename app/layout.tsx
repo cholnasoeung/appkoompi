@@ -1,3 +1,5 @@
+import { auth } from "@/auth";
+import SessionProviderWrapper from "@/components/SessionProviderWrapper";
 import "./globals.css";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
@@ -9,15 +11,19 @@ export const metadata: Metadata = {
     "Modern ecommerce storefront for curated products across home, workspace, and travel.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const session = await auth();
+
   return (
     <html lang="en">
       <body className="bg-background text-foreground antialiased">
-        <Navbar />
-        {children}
-        <Footer />
+        <SessionProviderWrapper session={session}>
+          <Navbar />
+          {children}
+          <Footer />
+        </SessionProviderWrapper>
       </body>
     </html>
   );

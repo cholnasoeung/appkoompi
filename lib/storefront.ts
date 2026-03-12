@@ -18,6 +18,8 @@ export type StorefrontProduct = {
   reviewCount: number;
   tags: string[];
   isFeatured: boolean;
+  sizes: string[];
+  colors: string[];
 };
 
 export type StorefrontCategory = {
@@ -64,6 +66,8 @@ const fallbackProducts: StorefrontProduct[] = [
     reviewCount: 124,
     tags: ["best seller", "commuter"],
     isFeatured: true,
+    sizes: ["S", "M", "L", "XL"],
+    colors: ["Black", "Stone"],
   },
   {
     _id: "2",
@@ -80,6 +84,8 @@ const fallbackProducts: StorefrontProduct[] = [
     reviewCount: 86,
     tags: ["editor pick"],
     isFeatured: true,
+    sizes: ["S", "M", "L"],
+    colors: ["Ivory", "Olive"],
   },
   {
     _id: "3",
@@ -96,6 +102,8 @@ const fallbackProducts: StorefrontProduct[] = [
     reviewCount: 41,
     tags: ["new arrival"],
     isFeatured: true,
+    sizes: ["S", "M", "L"],
+    colors: ["Sand", "Black"],
   },
   {
     _id: "4",
@@ -112,6 +120,8 @@ const fallbackProducts: StorefrontProduct[] = [
     reviewCount: 59,
     tags: ["on the go"],
     isFeatured: false,
+    sizes: [],
+    colors: ["Black", "Tan"],
   },
   {
     _id: "5",
@@ -128,6 +138,8 @@ const fallbackProducts: StorefrontProduct[] = [
     reviewCount: 72,
     tags: ["desk setup"],
     isFeatured: false,
+    sizes: ["28", "30", "32", "34"],
+    colors: ["Charcoal", "Khaki"],
   },
   {
     _id: "6",
@@ -144,6 +156,8 @@ const fallbackProducts: StorefrontProduct[] = [
     reviewCount: 97,
     tags: ["cozy", "seasonal"],
     isFeatured: true,
+    sizes: ["S", "M", "L", "XL"],
+    colors: ["Brown", "Cream"],
   },
 ];
 
@@ -161,6 +175,8 @@ function mapProduct(product: {
   reviewCount?: number;
   tags?: string[];
   isFeatured: boolean;
+  sizes?: string[];
+  colors?: string[];
   categoryId:
     | { _id?: { toString(): string }; name?: string | null }
     | { toString(): string };
@@ -187,6 +203,8 @@ function mapProduct(product: {
     reviewCount: product.reviewCount ?? 0,
     tags: product.tags ?? [],
     isFeatured: product.isFeatured,
+    sizes: product.sizes ?? [],
+    colors: product.colors ?? [],
   } satisfies StorefrontProduct;
 }
 

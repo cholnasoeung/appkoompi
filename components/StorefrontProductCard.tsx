@@ -89,6 +89,9 @@ export default function StorefrontProductCard({
 
         <AddToCartButton
           productId={product._id}
+          productName={product.name}
+          sizes={product.sizes}
+          colors={product.colors}
           className="w-full rounded-full bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
         />
       </div>

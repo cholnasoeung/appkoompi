@@ -320,13 +320,14 @@ OrderSchema.index({ userId: 1, placedAt: -1 });
 OrderSchema.index({ orderStatus: 1, placedAt: -1 });
 
 const existingOrderModel = mongoose.models.Order as Model<IOrder> | undefined;
+const shouldRecompileOrderModel =
+  process.env.NODE_ENV !== "production" ||
+  (existingOrderModel &&
+    (!existingOrderModel.schema.path("orderNumber") ||
+      !existingOrderModel.schema.path("pricing") ||
+      !existingOrderModel.schema.path("payment")));
 
-if (
-  existingOrderModel &&
-  (!existingOrderModel.schema.path("orderNumber") ||
-    !existingOrderModel.schema.path("pricing") ||
-    !existingOrderModel.schema.path("payment"))
-) {
+if (shouldRecompileOrderModel && mongoose.models.Order) {
   delete mongoose.models.Order;
 }
 

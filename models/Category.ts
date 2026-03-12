@@ -57,12 +57,13 @@ CategorySchema.index({ parentCategoryId: 1, isActive: 1 });
 
 const existingCategoryModel =
   mongoose.models.Category as Model<ICategory> | undefined;
+const shouldRecompileCategoryModel =
+  process.env.NODE_ENV !== "production" ||
+  (existingCategoryModel &&
+    (!existingCategoryModel.schema.path("slug") ||
+      !existingCategoryModel.schema.path("parentCategoryId")));
 
-if (
-  existingCategoryModel &&
-  (!existingCategoryModel.schema.path("slug") ||
-    !existingCategoryModel.schema.path("parentCategoryId"))
-) {
+if (shouldRecompileCategoryModel && mongoose.models.Category) {
   delete mongoose.models.Category;
 }
 

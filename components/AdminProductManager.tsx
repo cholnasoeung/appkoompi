@@ -50,6 +50,24 @@ const emptyForm: FormState = {
   attributes: "{}",
 };
 
+async function readJsonResponse(response: Response) {
+  const text = await response.text();
+
+  if (!text) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text) as Record<string, unknown>;
+  } catch {
+    return {
+      message: response.ok
+        ? "The server returned an unreadable response."
+        : "The server returned an unexpected response.",
+    };
+  }
+}
+
 function toCommaSeparated(value: string[]) {
   return value.join(", ");
 }
@@ -118,32 +136,51 @@ export default function AdminProductManager({
     setFeedback(null);
 
     startTransition(async () => {
-      const response = await fetch("/api/admin/categories", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: categoryName,
-          slug: categorySlug,
-        }),
-      });
+      try {
+        const response = await fetch("/api/admin/categories", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: categoryName,
+            slug: categorySlug,
+          }),
+        });
 
-      const data = await response.json();
+        const data = await readJsonResponse(response);
 
-      if (!response.ok) {
-        setError(data.message ?? "Unable to create category.");
-        return;
+        if (!response.ok) {
+          setError(
+            typeof data?.message === "string"
+              ? data.message
+              : "Unable to create category."
+          );
+          return;
+        }
+
+        if (!data || !("category" in data) || !data.category) {
+          setError("Category was saved, but the response was invalid.");
+          return;
+        }
+
+        setCategories((current) =>
+          [...current, data.category as AdminCategorySummary].sort((a, b) =>
+            a.name.localeCompare(b.name)
+          )
+        );
+        setForm((current) => ({
+          ...current,
+          categoryId: (data.category as AdminCategorySummary)._id,
+        }));
+        setCategoryName("");
+        setCategorySlug("");
+        setFeedback("Category created.");
+      } catch (error) {
+        setError(
+          error instanceof Error
+            ? error.message
+            : "Unable to create category."
+        );
       }
-
-      setCategories((current) =>
-        [...current, data.category].sort((a, b) => a.name.localeCompare(b.name))
-      );
-      setForm((current) => ({
-        ...current,
-        categoryId: data.category._id,
-      }));
-      setCategoryName("");
-      setCategorySlug("");
-      setFeedback("Category created.");
     });
   }
 
@@ -153,68 +190,85 @@ export default function AdminProductManager({
     setFeedback(null);
 
     startTransition(async () => {
-      let attributes: Record<string, string[]>;
-
       try {
-        attributes = JSON.parse(form.attributes || "{}") as Record<
-          string,
-          string[]
-        >;
-      } catch {
-        setError("Attributes must be valid JSON.");
-        return;
-      }
+        let attributes: Record<string, string[]>;
 
-      const payload = {
-        name: form.name,
-        slug: form.slug,
-        description: form.description,
-        shortDescription: form.shortDescription,
-        price: Number(form.price),
-        discountPrice: form.discountPrice ? Number(form.discountPrice) : null,
-        categoryId: form.categoryId,
-        brand: form.brand,
-        sku: form.sku,
-        stock: Number(form.stock),
-        tags: form.tags,
-        sizes: form.sizes,
-        colors: form.colors,
-        imageUrl: form.imageUrl,
-        imageAlt: form.imageAlt,
-        isFeatured: form.isFeatured,
-        isActive: form.isActive,
-        attributes,
-      };
-
-      const isEditing = Boolean(form.id);
-      const response = await fetch(
-        isEditing ? `/api/admin/products/${form.id}` : "/api/admin/products",
-        {
-          method: isEditing ? "PATCH" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+        try {
+          attributes = JSON.parse(form.attributes || "{}") as Record<
+            string,
+            string[]
+          >;
+        } catch {
+          setError("Attributes must be valid JSON.");
+          return;
         }
-      );
 
-      const data = await response.json();
+        const payload = {
+          name: form.name,
+          slug: form.slug,
+          description: form.description,
+          shortDescription: form.shortDescription,
+          price: Number(form.price),
+          discountPrice: form.discountPrice ? Number(form.discountPrice) : null,
+          categoryId: form.categoryId,
+          brand: form.brand,
+          sku: form.sku,
+          stock: Number(form.stock),
+          tags: form.tags,
+          sizes: form.sizes,
+          colors: form.colors,
+          imageUrl: form.imageUrl,
+          imageAlt: form.imageAlt,
+          isFeatured: form.isFeatured,
+          isActive: form.isActive,
+          attributes,
+        };
 
-      if (!response.ok) {
-        setError(data.message ?? "Unable to save product.");
-        return;
-      }
+        const isEditing = Boolean(form.id);
+        const response = await fetch(
+          isEditing ? `/api/admin/products/${form.id}` : "/api/admin/products",
+          {
+            method: isEditing ? "PATCH" : "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          }
+        );
 
-      setProducts((current) => {
-        if (isEditing) {
-          return current.map((product) =>
-            product._id === data.product._id ? data.product : product
+        const data = await readJsonResponse(response);
+
+        if (!response.ok) {
+          setError(
+            typeof data?.message === "string"
+              ? data.message
+              : "Unable to save product."
           );
+          return;
         }
 
-        return [data.product, ...current];
-      });
+        if (!data || !("product" in data) || !data.product) {
+          setError("Product was saved, but the response was invalid.");
+          return;
+        }
 
-      resetForm();
-      setFeedback(isEditing ? "Product updated." : "Product created.");
+        const savedProduct = data.product as AdminProductSummary;
+
+        setProducts((current) => {
+          if (isEditing) {
+            return current.map((product) =>
+              product._id === savedProduct._id ? savedProduct : product
+            );
+          }
+
+          return [savedProduct, ...current];
+        });
+
+        resetForm();
+        setFeedback(isEditing ? "Product updated." : "Product created.");
+      } catch (error) {
+        setError(
+          error instanceof Error ? error.message : "Unable to save product."
+        );
+      }
     });
   }
 
@@ -223,26 +277,36 @@ export default function AdminProductManager({
     setFeedback(null);
 
     startTransition(async () => {
-      const response = await fetch(`/api/admin/products/${productId}`, {
-        method: "DELETE",
-      });
+      try {
+        const response = await fetch(`/api/admin/products/${productId}`, {
+          method: "DELETE",
+        });
 
-      const data = await response.json();
+        const data = await readJsonResponse(response);
 
-      if (!response.ok) {
-        setError(data.message ?? "Unable to delete product.");
-        return;
+        if (!response.ok) {
+          setError(
+            typeof data?.message === "string"
+              ? data.message
+              : "Unable to delete product."
+          );
+          return;
+        }
+
+        setProducts((current) =>
+          current.filter((product) => product._id !== productId)
+        );
+
+        if (form.id === productId) {
+          resetForm();
+        }
+
+        setFeedback("Product deleted.");
+      } catch (error) {
+        setError(
+          error instanceof Error ? error.message : "Unable to delete product."
+        );
       }
-
-      setProducts((current) =>
-        current.filter((product) => product._id !== productId)
-      );
-
-      if (form.id === productId) {
-        resetForm();
-      }
-
-      setFeedback("Product deleted.");
     });
   }
 

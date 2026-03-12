@@ -22,7 +22,6 @@ const authenticatedProxy = withAuth(
     callbacks: {
       authorized: ({ token, req }) => {
         const isProtectedRoute =
-          req.nextUrl.pathname === "/" ||
           req.nextUrl.pathname.startsWith("/api/tasks");
 
         if (!isProtectedRoute) {
@@ -44,5 +43,5 @@ export default function proxy(request: NextRequest, event: NextFetchEvent) {
 }
 
 export const config = {
-  matcher: ["/", "/login", "/register", "/api/tasks/:path*"],
+  matcher: ["/login", "/register", "/api/tasks/:path*"],
 };

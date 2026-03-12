@@ -161,13 +161,14 @@ UserSchema.pre("validate", function syncAvatarAndImage() {
 });
 
 const existingUserModel = mongoose.models.User as Model<IUser> | undefined;
+const shouldRecompileUserModel =
+  process.env.NODE_ENV !== "production" ||
+  (existingUserModel &&
+    (!existingUserModel.schema.path("passwordHash") ||
+      !existingUserModel.schema.path("role") ||
+      !existingUserModel.schema.path("addresses")));
 
-if (
-  existingUserModel &&
-  (!existingUserModel.schema.path("passwordHash") ||
-    !existingUserModel.schema.path("role") ||
-    !existingUserModel.schema.path("addresses"))
-) {
+if (shouldRecompileUserModel && mongoose.models.User) {
   delete mongoose.models.User;
 }
 

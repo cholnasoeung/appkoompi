@@ -14,11 +14,10 @@ export default function ErrorPage({
           Error Boundary
         </p>
         <h1 className="mt-4 text-4xl font-black tracking-[-0.04em] text-slate-950">
-          Something went wrong while loading the task manager.
+          Something went wrong while loading the page.
         </h1>
         <p className="mt-4 text-lg leading-8 text-slate-600">
-          This is a basic App Router error boundary. Use reset to retry the
-          failed render or data request.
+          Retry the request, or go back and try the action again.
         </p>
         <p className="mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
           {error.message || "Unexpected application error."}

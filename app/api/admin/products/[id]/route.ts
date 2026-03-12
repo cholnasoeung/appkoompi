@@ -27,6 +27,58 @@ function parseList(value: unknown) {
     .filter(Boolean);
 }
 
+function normalizeAttributes(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  const normalizedEntries = Object.entries(value as Record<string, unknown>).map(
+    ([key, itemValue]) => {
+      if (!Array.isArray(itemValue)) {
+        throw new Error(`Attribute "${key}" must be an array of strings.`);
+      }
+
+      return [
+        key,
+        itemValue
+          .filter((item): item is string => typeof item === "string")
+          .map((item) => item.trim())
+          .filter(Boolean),
+      ] as const;
+    }
+  );
+
+  return Object.fromEntries(normalizedEntries);
+}
+
+function buildErrorResponse(error: unknown, fallbackMessage: string) {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === 11000
+  ) {
+    const duplicateField = Object.keys(
+      (error as { keyPattern?: Record<string, number> }).keyPattern ?? {}
+    )[0];
+
+    return Response.json(
+      {
+        message: duplicateField
+          ? `${duplicateField} already exists.`
+          : "A unique field already exists.",
+      },
+      { status: 409 }
+    );
+  }
+
+  if (error instanceof Error) {
+    return Response.json({ message: error.message }, { status: 500 });
+  }
+
+  return Response.json({ message: fallbackMessage }, { status: 500 });
+}
+
 async function parseUpdatePayload(body: Record<string, unknown>) {
   const name = typeof body.name === "string" ? body.name.trim() : "";
   const slug = normalizeSlug(typeof body.slug === "string" ? body.slug : name);
@@ -99,10 +151,7 @@ async function parseUpdatePayload(body: Record<string, unknown>) {
       tags: parseList(body.tags),
       sizes: parseList(body.sizes),
       colors: parseList(body.colors),
-      attributes:
-        body.attributes && typeof body.attributes === "object"
-          ? body.attributes
-          : {},
+      attributes: normalizeAttributes(body.attributes),
       isFeatured: Boolean(body.isFeatured),
       isActive: body.isActive !== false,
       images: imageUrl
@@ -117,77 +166,87 @@ function invalidIdResponse() {
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
-  const authResult = await getAdminApiSession();
+  try {
+    const authResult = await getAdminApiSession();
 
-  if (!authResult.ok) {
-    return authResult.response;
+    if (!authResult.ok) {
+      return authResult.response;
+    }
+
+    const { id } = await context.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return invalidIdResponse();
+    }
+
+    await connectToDatabase();
+
+    const product = await Product.findById(id);
+
+    if (!product) {
+      return Response.json({ message: "Product not found." }, { status: 404 });
+    }
+
+    const body = (await request.json()) as Record<string, unknown>;
+    const parsed = await parseUpdatePayload(body);
+
+    if ("error" in parsed) {
+      return Response.json({ message: parsed.error }, { status: 400 });
+    }
+
+    product.set(parsed.data);
+    await product.save();
+    await product.populate("categoryId", "name");
+
+    const productObject = product.toObject();
+    const populatedCategory =
+      productObject.categoryId &&
+      typeof productObject.categoryId === "object" &&
+      "name" in productObject.categoryId
+        ? productObject.categoryId
+        : null;
+
+    return Response.json({
+      message: "Product updated successfully.",
+      product: serializeAdminProduct({
+        ...productObject,
+        categoryId: populatedCategory?._id ?? productObject.categoryId,
+        category: populatedCategory
+          ? { name: populatedCategory.name as string }
+          : null,
+      }),
+    });
+  } catch (error) {
+    return buildErrorResponse(error, "Failed to update product.");
   }
-
-  const { id } = await context.params;
-
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    return invalidIdResponse();
-  }
-
-  await connectToDatabase();
-
-  const product = await Product.findById(id);
-
-  if (!product) {
-    return Response.json({ message: "Product not found." }, { status: 404 });
-  }
-
-  const body = (await request.json()) as Record<string, unknown>;
-  const parsed = await parseUpdatePayload(body);
-
-  if ("error" in parsed) {
-    return Response.json({ message: parsed.error }, { status: 400 });
-  }
-
-  product.set(parsed.data);
-  await product.save();
-  await product.populate("categoryId", "name");
-
-  const productObject = product.toObject();
-  const populatedCategory =
-    productObject.categoryId &&
-    typeof productObject.categoryId === "object" &&
-    "name" in productObject.categoryId
-      ? productObject.categoryId
-      : null;
-
-  return Response.json({
-    message: "Product updated successfully.",
-    product: serializeAdminProduct({
-      ...productObject,
-      categoryId: populatedCategory?._id ?? productObject.categoryId,
-      category: populatedCategory ? { name: populatedCategory.name as string } : null,
-    }),
-  });
 }
 
 export async function DELETE(_request: Request, context: RouteContext) {
-  const authResult = await getAdminApiSession();
+  try {
+    const authResult = await getAdminApiSession();
 
-  if (!authResult.ok) {
-    return authResult.response;
+    if (!authResult.ok) {
+      return authResult.response;
+    }
+
+    const { id } = await context.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return invalidIdResponse();
+    }
+
+    await connectToDatabase();
+
+    const product = await Product.findById(id);
+
+    if (!product) {
+      return Response.json({ message: "Product not found." }, { status: 404 });
+    }
+
+    await product.deleteOne();
+
+    return Response.json({ message: "Product deleted successfully." });
+  } catch (error) {
+    return buildErrorResponse(error, "Failed to delete product.");
   }
-
-  const { id } = await context.params;
-
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    return invalidIdResponse();
-  }
-
-  await connectToDatabase();
-
-  const product = await Product.findById(id);
-
-  if (!product) {
-    return Response.json({ message: "Product not found." }, { status: 404 });
-  }
-
-  await product.deleteOne();
-
-  return Response.json({ message: "Product deleted successfully." });
 }

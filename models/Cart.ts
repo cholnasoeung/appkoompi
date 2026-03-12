@@ -121,12 +121,13 @@ CartSchema.index({ userId: 1, updatedAt: -1 });
 CartSchema.index({ sessionId: 1, updatedAt: -1 });
 
 const existingCartModel = mongoose.models.Cart as Model<ICart> | undefined;
+const shouldRecompileCartModel =
+  process.env.NODE_ENV !== "production" ||
+  (existingCartModel &&
+    (!existingCartModel.schema.path("items") ||
+      !existingCartModel.schema.path("sessionId")));
 
-if (
-  existingCartModel &&
-  (!existingCartModel.schema.path("items") ||
-    !existingCartModel.schema.path("sessionId"))
-) {
+if (shouldRecompileCartModel && mongoose.models.Cart) {
   delete mongoose.models.Cart;
 }
 

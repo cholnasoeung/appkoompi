@@ -4,6 +4,34 @@ import { connectToDatabase } from "@/lib/mongodb";
 import Category from "@/models/Category";
 import Product from "@/models/Product";
 
+function buildErrorResponse(error: unknown, fallbackMessage: string) {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === 11000
+  ) {
+    const duplicateField = Object.keys(
+      (error as { keyPattern?: Record<string, number> }).keyPattern ?? {}
+    )[0];
+
+    return Response.json(
+      {
+        message: duplicateField
+          ? `${duplicateField} already exists.`
+          : "A unique field already exists.",
+      },
+      { status: 409 }
+    );
+  }
+
+  if (error instanceof Error) {
+    return Response.json({ message: error.message }, { status: 500 });
+  }
+
+  return Response.json({ message: fallbackMessage }, { status: 500 });
+}
+
 function normalizeSlug(value: string) {
   return value
     .trim()
@@ -21,6 +49,30 @@ function parseList(value: unknown) {
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function normalizeAttributes(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  const normalizedEntries = Object.entries(value as Record<string, unknown>).map(
+    ([key, itemValue]) => {
+      if (!Array.isArray(itemValue)) {
+        throw new Error(`Attribute "${key}" must be an array of strings.`);
+      }
+
+      return [
+        key,
+        itemValue
+          .filter((item): item is string => typeof item === "string")
+          .map((item) => item.trim())
+          .filter(Boolean),
+      ] as const;
+    }
+  );
+
+  return Object.fromEntries(normalizedEntries);
 }
 
 async function parseProductPayload(body: Record<string, unknown>) {
@@ -95,10 +147,7 @@ async function parseProductPayload(body: Record<string, unknown>) {
       tags: parseList(body.tags),
       sizes: parseList(body.sizes),
       colors: parseList(body.colors),
-      attributes:
-        body.attributes && typeof body.attributes === "object"
-          ? body.attributes
-          : {},
+      attributes: normalizeAttributes(body.attributes),
       isFeatured: Boolean(body.isFeatured),
       isActive: body.isActive !== false,
       images: imageUrl
@@ -109,73 +158,85 @@ async function parseProductPayload(body: Record<string, unknown>) {
 }
 
 export async function GET() {
-  const authResult = await getAdminApiSession();
+  try {
+    const authResult = await getAdminApiSession();
 
-  if (!authResult.ok) {
-    return authResult.response;
+    if (!authResult.ok) {
+      return authResult.response;
+    }
+
+    await connectToDatabase();
+
+    const products = await Product.find()
+      .populate("categoryId", "name")
+      .sort({ updatedAt: -1 })
+      .lean();
+
+    return Response.json(
+      products.map((product) => {
+        const populatedCategory =
+          product.categoryId &&
+          typeof product.categoryId === "object" &&
+          "name" in product.categoryId
+            ? product.categoryId
+            : null;
+
+        return serializeAdminProduct({
+          ...product,
+          categoryId: populatedCategory?._id ?? product.categoryId,
+          category: populatedCategory
+            ? { name: populatedCategory.name as string }
+            : null,
+        });
+      })
+    );
+  } catch (error) {
+    return buildErrorResponse(error, "Failed to fetch products.");
   }
-
-  await connectToDatabase();
-
-  const products = await Product.find()
-    .populate("categoryId", "name")
-    .sort({ updatedAt: -1 })
-    .lean();
-
-  return Response.json(
-    products.map((product) => {
-      const populatedCategory =
-        product.categoryId &&
-        typeof product.categoryId === "object" &&
-        "name" in product.categoryId
-          ? product.categoryId
-          : null;
-
-      return serializeAdminProduct({
-        ...product,
-        categoryId: populatedCategory?._id ?? product.categoryId,
-        category: populatedCategory ? { name: populatedCategory.name as string } : null,
-      });
-    })
-  );
 }
 
 export async function POST(request: Request) {
-  const authResult = await getAdminApiSession();
+  try {
+    const authResult = await getAdminApiSession();
 
-  if (!authResult.ok) {
-    return authResult.response;
+    if (!authResult.ok) {
+      return authResult.response;
+    }
+
+    await connectToDatabase();
+
+    const body = (await request.json()) as Record<string, unknown>;
+    const parsed = await parseProductPayload(body);
+
+    if ("error" in parsed) {
+      return Response.json({ message: parsed.error }, { status: 400 });
+    }
+
+    const product = await Product.create(parsed.data);
+    await product.populate("categoryId", "name");
+
+    const productObject = product.toObject();
+    const populatedCategory =
+      productObject.categoryId &&
+      typeof productObject.categoryId === "object" &&
+      "name" in productObject.categoryId
+        ? productObject.categoryId
+        : null;
+
+    return Response.json(
+      {
+        message: "Product created successfully.",
+        product: serializeAdminProduct({
+          ...productObject,
+          categoryId: populatedCategory?._id ?? productObject.categoryId,
+          category: populatedCategory
+            ? { name: populatedCategory.name as string }
+            : null,
+        }),
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    return buildErrorResponse(error, "Failed to create product.");
   }
-
-  await connectToDatabase();
-
-  const body = (await request.json()) as Record<string, unknown>;
-  const parsed = await parseProductPayload(body);
-
-  if ("error" in parsed) {
-    return Response.json({ message: parsed.error }, { status: 400 });
-  }
-
-  const product = await Product.create(parsed.data);
-  await product.populate("categoryId", "name");
-
-  const productObject = product.toObject();
-  const populatedCategory =
-    productObject.categoryId &&
-    typeof productObject.categoryId === "object" &&
-    "name" in productObject.categoryId
-      ? productObject.categoryId
-      : null;
-
-  return Response.json(
-    {
-      message: "Product created successfully.",
-      product: serializeAdminProduct({
-        ...productObject,
-        categoryId: populatedCategory?._id ?? productObject.categoryId,
-        category: populatedCategory ? { name: populatedCategory.name as string } : null,
-      }),
-    },
-    { status: 201 }
-  );
 }

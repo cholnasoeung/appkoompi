@@ -1,10 +1,13 @@
 import { auth } from "@/auth";
+import CartBadgeLink from "@/components/CartBadgeLink";
+import { getCurrentUserCartCount } from "@/lib/cart";
 import Link from "next/link";
 import SignOutButton from "./SignOutButton";
 import ThemeToggle from "./ThemeToggle";
 
 export default async function Navbar() {
   const session = await auth();
+  const cartCount = session?.user?.id ? await getCurrentUserCartCount() : 0;
   const user = session?.user;
   const userLabel = user?.name?.trim() || user?.email || "User";
 
@@ -68,6 +71,7 @@ export default async function Navbar() {
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
+              <CartBadgeLink count={cartCount} />
               {user ? (
                 <div className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm md:flex-initial">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-950 text-sm font-bold text-white">
