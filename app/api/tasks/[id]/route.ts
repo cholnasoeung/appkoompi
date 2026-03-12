@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import mongoose from "mongoose";
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
+import { getAppConfigurationError } from "@/lib/env";
 import Task from "@/models/Task";
 
 type TaskPriority = "low" | "medium" | "high";
@@ -61,6 +62,12 @@ function serializeTask(task: {
 
 export async function PATCH(request: Request, context: RouteContext) {
   try {
+    const configurationError = getAppConfigurationError();
+
+    if (configurationError) {
+      return NextResponse.json({ message: configurationError }, { status: 503 });
+    }
+
     const session = await auth();
 
     if (!session?.user?.id) {
@@ -136,6 +143,12 @@ export async function PATCH(request: Request, context: RouteContext) {
 
 export async function DELETE(_request: Request, context: RouteContext) {
   try {
+    const configurationError = getAppConfigurationError();
+
+    if (configurationError) {
+      return NextResponse.json({ message: configurationError }, { status: 503 });
+    }
+
     const session = await auth();
 
     if (!session?.user?.id) {

@@ -1,6 +1,35 @@
 import NextAuth from "next-auth";
-import { authOptions } from "@/auth";
+import {
+  authConfigurationError,
+  authEnabled,
+  authOptions,
+} from "@/auth";
 
 const handler = NextAuth(authOptions);
 
-export { handler as GET, handler as POST };
+function authMisconfiguredResponse() {
+  return Response.json(
+    {
+      message:
+        authConfigurationError ??
+        "Authentication is not configured on the server.",
+    },
+    { status: 503 }
+  );
+}
+
+export async function GET(request: Request, context: unknown) {
+  if (!authEnabled) {
+    return authMisconfiguredResponse();
+  }
+
+  return handler(request, context);
+}
+
+export async function POST(request: Request, context: unknown) {
+  if (!authEnabled) {
+    return authMisconfiguredResponse();
+  }
+
+  return handler(request, context);
+}

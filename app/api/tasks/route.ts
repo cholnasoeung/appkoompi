@@ -1,10 +1,17 @@
 import { auth } from "@/auth";
 import { connectToDatabase } from "@/lib/mongodb";
+import { getAppConfigurationError } from "@/lib/env";
 import Task from "@/models/Task";
 import { getTasks, serializeTask, TaskPriority } from "@/lib/tasks";
 
 export async function GET() {
   try {
+    const configurationError = getAppConfigurationError();
+
+    if (configurationError) {
+      return Response.json({ message: configurationError }, { status: 503 });
+    }
+
     const session = await auth();
 
     if (!session?.user?.id) {
@@ -23,6 +30,12 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const configurationError = getAppConfigurationError();
+
+    if (configurationError) {
+      return Response.json({ message: configurationError }, { status: 503 });
+    }
+
     const session = await auth();
 
     if (!session?.user?.id) {

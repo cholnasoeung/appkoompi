@@ -1,7 +1,8 @@
 import { withAuth } from "next-auth/middleware";
-import { NextResponse } from "next/server";
+import { NextFetchEvent, NextRequest, NextResponse } from "next/server";
+import { authEnabled } from "@/auth";
 
-export default withAuth(
+const authenticatedProxy = withAuth(
   function proxy(request) {
     const isAuthenticated = Boolean(request.nextauth.token);
     const isAuthPage =
@@ -33,6 +34,14 @@ export default withAuth(
     },
   }
 );
+
+export default function proxy(request: NextRequest, event: NextFetchEvent) {
+  if (!authEnabled) {
+    return NextResponse.next();
+  }
+
+  return authenticatedProxy(request as never, event);
+}
 
 export const config = {
   matcher: ["/", "/login", "/register", "/api/tasks/:path*"],

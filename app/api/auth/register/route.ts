@@ -1,6 +1,7 @@
 import { hash } from "bcryptjs";
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
+import { getDatabaseConfigurationError } from "@/lib/env";
 import User from "@/models/User";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -11,6 +12,15 @@ function normalizeEmail(email: string) {
 
 export async function POST(request: Request) {
   try {
+    const databaseConfigurationError = getDatabaseConfigurationError();
+
+    if (databaseConfigurationError) {
+      return NextResponse.json(
+        { message: databaseConfigurationError },
+        { status: 503 }
+      );
+    }
+
     const body = await request.json();
     const name = typeof body.name === "string" ? body.name.trim() : "";
     const email = typeof body.email === "string" ? normalizeEmail(body.email) : "";

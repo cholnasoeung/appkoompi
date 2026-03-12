@@ -4,32 +4,24 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GitHubProvider from "next-auth/providers/github";
 import { compare } from "bcryptjs";
 import { connectToDatabase } from "@/lib/mongodb";
+import {
+  environmentStatus,
+  getAuthConfigurationError,
+  getDatabaseConfigurationError,
+} from "@/lib/env";
 import User from "@/models/User";
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
-function hasRealEnvValue(value: string | undefined) {
-  if (!value) {
-    return false;
-  }
-
-  const normalizedValue = value.trim().toLowerCase();
-
-  return (
-    normalizedValue.length > 0 &&
-    !normalizedValue.startsWith("your_") &&
-    !normalizedValue.includes("client_id_here") &&
-    !normalizedValue.includes("client_secret_here")
-  );
-}
-
 const authSecret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET;
 const githubClientId = process.env.GITHUB_ID;
 const githubClientSecret = process.env.GITHUB_SECRET;
-export const githubAuthEnabled =
-  hasRealEnvValue(githubClientId) && hasRealEnvValue(githubClientSecret);
+export const authEnabled = environmentStatus.authSecretConfigured;
+export const githubAuthEnabled = environmentStatus.githubConfigured;
+export const authConfigurationError = getAuthConfigurationError();
+export const databaseConfigurationError = getDatabaseConfigurationError();
 
 let providers: NextAuthOptions["providers"] = [
   CredentialsProvider({
@@ -39,6 +31,10 @@ let providers: NextAuthOptions["providers"] = [
       password: { label: "Password", type: "password" },
     },
     async authorize(credentials) {
+      if (databaseConfigurationError) {
+        return null;
+      }
+
       if (
         !credentials ||
         typeof credentials.email !== "string" ||
@@ -97,6 +93,10 @@ export const authOptions: NextAuthOptions = {
   providers,
   callbacks: {
     async signIn({ user, account }) {
+      if (databaseConfigurationError) {
+        return false;
+      }
+
       if (account?.provider !== "github") {
         return true;
       }
@@ -126,6 +126,10 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
     async jwt({ token, user }) {
+      if (databaseConfigurationError) {
+        return token;
+      }
+
       if (user?.email) {
         await connectToDatabase();
 
@@ -158,5 +162,9 @@ export const authOptions: NextAuthOptions = {
 };
 
 export function auth() {
+  if (!authEnabled) {
+    return Promise.resolve(null);
+  }
+
   return getServerSession(authOptions);
 }

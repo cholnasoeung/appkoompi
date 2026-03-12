@@ -1,4 +1,4 @@
-import { auth, githubAuthEnabled } from "@/auth";
+import { auth, authConfigurationError, githubAuthEnabled } from "@/auth";
 import AuthForm from "@/components/AuthForm";
 import { redirect } from "next/navigation";
 
@@ -23,6 +23,7 @@ export default async function RegisterPage({
     <AuthForm
       mode="register"
       callbackUrl={params.callbackUrl || "/"}
+      initialError={authConfigurationError}
       githubEnabled={githubAuthEnabled}
     />
   );
