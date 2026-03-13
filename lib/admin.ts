@@ -4,6 +4,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import Category from "@/models/Category";
 import Order from "@/models/Order";
 import Product from "@/models/Product";
+import Slide from "@/models/Slide";
 import User from "@/models/User";
 import { redirect } from "next/navigation";
 
@@ -70,6 +71,19 @@ export type AdminUserSummary = {
   phone: string | null;
   addressCount: number;
   createdAt: string;
+};
+
+export type AdminSlideSummary = {
+  _id: string;
+  title: string;
+  subtitle: string | null;
+  description: string | null;
+  imageUrl: string;
+  ctaLabel: string | null;
+  ctaHref: string | null;
+  badge: string | null;
+  isActive: boolean;
+  sortOrder: number;
 };
 
 export async function requireAdminPageSession() {
@@ -298,5 +312,24 @@ export async function getAdminUsers(): Promise<AdminUserSummary[]> {
       user.createdAt instanceof Date
         ? user.createdAt.toISOString()
         : new Date(user.createdAt).toISOString(),
+  }));
+}
+
+export async function getAdminSlides(): Promise<AdminSlideSummary[]> {
+  await connectToDatabase();
+
+  const slides = await Slide.find({}).sort({ sortOrder: 1, updatedAt: -1 }).lean();
+
+  return slides.map((slide) => ({
+    _id: slide._id.toString(),
+    title: slide.title,
+    subtitle: slide.subtitle ?? null,
+    description: slide.description ?? null,
+    imageUrl: slide.imageUrl,
+    ctaLabel: slide.ctaLabel ?? null,
+    ctaHref: slide.ctaHref ?? null,
+    badge: slide.badge ?? null,
+    isActive: slide.isActive,
+    sortOrder: slide.sortOrder,
   }));
 }

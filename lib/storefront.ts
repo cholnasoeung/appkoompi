@@ -2,6 +2,7 @@ import { getDatabaseConfigurationError } from "@/lib/env";
 import { connectToDatabase } from "@/lib/mongodb";
 import Category from "@/models/Category";
 import Product from "@/models/Product";
+import Slide from "@/models/Slide";
 
 export type StorefrontProduct = {
   _id: string;
@@ -32,6 +33,17 @@ export type StorefrontCategory = {
   name: string;
   slug: string;
   description: string;
+};
+
+export type StorefrontSlide = {
+  _id: string;
+  title: string;
+  subtitle: string | null;
+  description: string | null;
+  imageUrl: string;
+  ctaLabel: string | null;
+  ctaHref: string | null;
+  badge: string | null;
 };
 
 export type CatalogSortOption =
@@ -197,6 +209,29 @@ const fallbackProducts: StorefrontProduct[] = [
   },
 ];
 
+const fallbackSlides: StorefrontSlide[] = [
+  {
+    _id: "slide-1",
+    title: "New season essentials",
+    subtitle: "Curated arrivals",
+    description: "Fresh storefront highlights with clean silhouettes, premium textures, and strong everyday utility.",
+    imageUrl: "/next.svg",
+    ctaLabel: "Shop catalog",
+    ctaHref: "/catalog",
+    badge: "Campaign drop",
+  },
+  {
+    _id: "slide-2",
+    title: "Built for daily wear",
+    subtitle: "Updated weekly",
+    description: "Rotate hero images, launch new campaigns, and keep the homepage moving with a managed slider.",
+    imageUrl: "/globe.svg",
+    ctaLabel: "Browse products",
+    ctaHref: "/catalog?sort=latest",
+    badge: "Weekly picks",
+  },
+];
+
 function mapProduct(product: {
   _id: { toString(): string };
   name: string;
@@ -311,6 +346,39 @@ export async function getStorefrontData() {
       latestProducts: fallbackProducts,
       usesFallback: true,
     };
+  }
+}
+
+export async function getStorefrontSlides() {
+  const configurationError = getDatabaseConfigurationError();
+
+  if (configurationError) {
+    return fallbackSlides;
+  }
+
+  try {
+    await connectToDatabase();
+
+    const slides = await Slide.find({ isActive: true })
+      .sort({ sortOrder: 1, updatedAt: -1 })
+      .lean();
+
+    if (slides.length === 0) {
+      return fallbackSlides;
+    }
+
+    return slides.map((slide) => ({
+      _id: slide._id.toString(),
+      title: slide.title,
+      subtitle: slide.subtitle ?? null,
+      description: slide.description ?? null,
+      imageUrl: slide.imageUrl,
+      ctaLabel: slide.ctaLabel ?? null,
+      ctaHref: slide.ctaHref ?? null,
+      badge: slide.badge ?? null,
+    })) satisfies StorefrontSlide[];
+  } catch {
+    return fallbackSlides;
   }
 }
 

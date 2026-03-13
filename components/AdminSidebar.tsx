@@ -24,6 +24,11 @@ const navigation = [
     label: "Users",
     description: "Roles, contact data, and account control",
   },
+  {
+    href: "/admin/slides",
+    label: "Slider",
+    description: "Homepage hero images and ordering",
+  },
 ];
 
 export default function AdminSidebar({

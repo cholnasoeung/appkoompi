@@ -1,13 +1,13 @@
 import Link from "next/link";
 import StorefrontHeroSlider from "@/components/StorefrontHeroSlider";
 import StorefrontProductCard from "@/components/StorefrontProductCard";
-import { getStorefrontData } from "@/lib/storefront";
+import { getStorefrontData, getStorefrontSlides } from "@/lib/storefront";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const { categories, featuredProducts, latestProducts, usesFallback } =
-    await getStorefrontData();
+  const [{ categories, featuredProducts, latestProducts, usesFallback }, slides] =
+    await Promise.all([getStorefrontData(), getStorefrontSlides()]);
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(251,191,36,0.14),_transparent_26%),linear-gradient(180deg,_#fffaf0_0%,_#ffffff_24%,_#f8fafc_100%)]">
@@ -15,9 +15,7 @@ export default async function HomePage() {
         Free delivery over $120 and member access to limited weekly drops
       </section>
 
-      <StorefrontHeroSlider
-        products={featuredProducts.length > 0 ? featuredProducts : latestProducts.slice(0, 4)}
-      />
+      <StorefrontHeroSlider slides={slides} />
 
       <section className="mx-auto grid max-w-7xl gap-4 px-4 pb-4 sm:px-6 lg:grid-cols-4 lg:px-8">
         <div className="rounded-[1.8rem] border border-slate-200 bg-white p-5 shadow-sm">
