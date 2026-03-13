@@ -127,4 +127,22 @@ export async function getCurrentUserOrderByNumber(orderNumber: string) {
   return serializeOrder(order);
 }
 
+export async function getCurrentUserOrders() {
+  const session = await auth();
+
+  if (!session?.user?.id || !mongoose.Types.ObjectId.isValid(session.user.id)) {
+    return [];
+  }
+
+  await connectToDatabase();
+
+  const orders = await Order.find({
+    userId: new mongoose.Types.ObjectId(session.user.id),
+  })
+    .sort({ placedAt: -1 })
+    .lean();
+
+  return orders.map(serializeOrder);
+}
+
 export { serializeOrder };

@@ -43,6 +43,25 @@ export type AdminCategorySummary = {
   isActive: boolean;
 };
 
+export type AdminOrderSummary = {
+  _id: string;
+  orderNumber: string;
+  customerName: string;
+  customerEmail: string;
+  orderStatus:
+    | "pending"
+    | "confirmed"
+    | "processing"
+    | "shipped"
+    | "delivered"
+    | "cancelled";
+  paymentStatus: "pending" | "paid" | "failed" | "refunded";
+  paymentMethod: string;
+  totalAmount: number;
+  itemCount: number;
+  placedAt: string;
+};
+
 export async function requireAdminPageSession() {
   const configurationError = getAppConfigurationError();
 
@@ -219,4 +238,36 @@ export async function getAdminDashboardStats() {
     featuredCount,
     lowStockCount,
   };
+}
+
+export async function getAdminOrders(): Promise<AdminOrderSummary[]> {
+  await connectToDatabase();
+
+  const orders = await Order.find({})
+    .populate("userId", "name email")
+    .sort({ placedAt: -1 })
+    .lean();
+
+  return orders.map((order) => {
+    const user =
+      order.userId && typeof order.userId === "object" && "email" in order.userId
+        ? (order.userId as { name?: string; email?: string })
+        : null;
+
+    return {
+      _id: order._id.toString(),
+      orderNumber: order.orderNumber,
+      customerName: (user?.name as string | undefined) ?? "Customer",
+      customerEmail: (user?.email as string | undefined) ?? "",
+      orderStatus: order.orderStatus,
+      paymentStatus: order.payment.status,
+      paymentMethod: order.payment.method,
+      totalAmount: order.pricing.totalAmount,
+      itemCount: order.items.length,
+      placedAt:
+        order.placedAt instanceof Date
+          ? order.placedAt.toISOString()
+          : new Date(order.placedAt).toISOString(),
+    } satisfies AdminOrderSummary;
+  });
 }

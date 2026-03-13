@@ -14,6 +14,11 @@ const navigation = [
     label: "Products",
     description: "Catalog, pricing, and inventory",
   },
+  {
+    href: "/admin/orders",
+    label: "Orders",
+    description: "Status updates and customer fulfillment",
+  },
 ];
 
 export default function AdminSidebar({
