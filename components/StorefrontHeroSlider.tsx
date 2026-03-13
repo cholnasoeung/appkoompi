@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type { StorefrontSlide } from "@/lib/storefront";
 
 const AUTO_SLIDE_DELAY = 5000;
@@ -13,24 +12,27 @@ export default function StorefrontHeroSlider({
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-
-  const safeSlides = useMemo(() => slides ?? [], [slides]);
+  const safeSlides = slides ?? [];
+  const currentIndex =
+    safeSlides.length === 0 ? 0 : activeIndex % safeSlides.length;
 
   useEffect(() => {
-    if (safeSlides.length <= 1 || isPaused) return;
+    if (safeSlides.length <= 1 || isPaused) {
+      return;
+    }
 
-    const intervalId = window.setInterval(() => {
+    const timeoutId = window.setTimeout(() => {
       setActiveIndex((current) => (current + 1) % safeSlides.length);
     }, AUTO_SLIDE_DELAY);
 
-    return () => window.clearInterval(intervalId);
-  }, [safeSlides.length, isPaused]);
+    return () => window.clearTimeout(timeoutId);
+  }, [currentIndex, safeSlides.length, isPaused]);
 
   if (safeSlides.length === 0) {
     return null;
   }
 
-  const activeSlide = safeSlides[activeIndex];
+  const activeSlide = safeSlides[currentIndex];
 
   function goToPrevious() {
     setActiveIndex(
@@ -129,7 +131,7 @@ export default function StorefrontHeroSlider({
                     onClick={() => setActiveIndex(index)}
                     aria-label={`Go to ${slide.title}`}
                     className={
-                      index === activeIndex
+                      index === currentIndex
                         ? "h-2.5 w-8 rounded-full bg-slate-950 transition-all duration-300"
                         : "h-2.5 w-2.5 rounded-full bg-slate-300 transition-all duration-300 hover:bg-slate-400"
                     }
