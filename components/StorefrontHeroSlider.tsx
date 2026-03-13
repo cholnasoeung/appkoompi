@@ -114,7 +114,7 @@ export default function StorefrontHeroSlider({
               <p
                 className={`mt-3 text-3xl font-black uppercase italic tracking-[-0.05em] ${theme.accent}`}
               >
-                Cholna spotlight
+                Ecommerce spotlight
               </p>
               <p className="mt-5 max-w-md text-sm leading-7 text-slate-600 sm:text-base">
                 {activeProduct.description}
@@ -169,10 +169,10 @@ export default function StorefrontHeroSlider({
 
               <div className="absolute bottom-6 left-1/2 w-[46%] -translate-x-1/2 text-center">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-white/70">
-                  {activeProduct.brand ?? "Cholna Select"}
+                  {activeProduct.brand ?? "Store Select"}
                 </p>
                 <h2 className="mt-2 text-4xl font-black uppercase tracking-[-0.08em] sm:text-6xl">
-                  CHOLNA
+                  STORE
                 </h2>
                 <p className={`mt-2 text-xl font-black uppercase italic sm:text-3xl ${theme.accent}`}>
                   {activeProduct.categoryName}

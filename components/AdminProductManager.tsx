@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useTransition } from "react";
@@ -5,6 +6,12 @@ import type {
   AdminCategorySummary,
   AdminProductSummary,
 } from "@/lib/admin";
+
+type ProductImageFormValue = {
+  url: string;
+  alt: string;
+  isPrimary: boolean;
+};
 
 type FormState = {
   id: string | null;
@@ -21,11 +28,10 @@ type FormState = {
   tags: string;
   sizes: string;
   colors: string;
-  imageUrl: string;
-  imageAlt: string;
   isFeatured: boolean;
   isActive: boolean;
   attributes: string;
+  images: ProductImageFormValue[];
 };
 
 const emptyForm: FormState = {
@@ -43,11 +49,10 @@ const emptyForm: FormState = {
   tags: "",
   sizes: "",
   colors: "",
-  imageUrl: "",
-  imageAlt: "",
   isFeatured: false,
   isActive: true,
   attributes: "{}",
+  images: [],
 };
 
 async function readJsonResponse(response: Response) {
@@ -72,6 +77,20 @@ function toCommaSeparated(value: string[]) {
   return value.join(", ");
 }
 
+function normalizeFormImages(images: ProductImageFormValue[]) {
+  if (images.length === 0) {
+    return [];
+  }
+
+  const primaryIndex = images.findIndex((image) => image.isPrimary);
+  const normalizedPrimaryIndex = primaryIndex >= 0 ? primaryIndex : 0;
+
+  return images.map((image, index) => ({
+    ...image,
+    isPrimary: index === normalizedPrimaryIndex,
+  }));
+}
+
 function productToFormState(product: AdminProductSummary): FormState {
   return {
     id: product._id,
@@ -89,11 +108,26 @@ function productToFormState(product: AdminProductSummary): FormState {
     tags: toCommaSeparated(product.tags),
     sizes: toCommaSeparated(product.sizes),
     colors: toCommaSeparated(product.colors),
-    imageUrl: product.imageUrl ?? "",
-    imageAlt: product.name,
     isFeatured: product.isFeatured,
     isActive: product.isActive,
     attributes: JSON.stringify(product.attributes, null, 2),
+    images: normalizeFormImages(
+      product.images.length > 0
+        ? product.images.map((image) => ({
+            url: image.url,
+            alt: image.alt ?? product.name,
+            isPrimary: image.isPrimary,
+          }))
+        : product.imageUrl
+          ? [
+              {
+                url: product.imageUrl,
+                alt: product.name,
+                isPrimary: true,
+              },
+            ]
+          : []
+    ),
   };
 }
 
@@ -114,6 +148,8 @@ export default function AdminProductManager({
   const [categorySlug, setCategorySlug] = useState("");
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [uploadingMessage, setUploadingMessage] = useState<string | null>(null);
+  const [manualImageUrl, setManualImageUrl] = useState("");
   const [isPending, startTransition] = useTransition();
 
   function resetForm() {
@@ -121,6 +157,7 @@ export default function AdminProductManager({
       ...emptyForm,
       categoryId: categories[0]?._id ?? "",
     });
+    setManualImageUrl("");
   }
 
   function updateField<Key extends keyof FormState>(
@@ -130,6 +167,108 @@ export default function AdminProductManager({
     setForm((current) => ({ ...current, [key]: value }));
   }
 
+  function updateImages(
+    updater: (images: ProductImageFormValue[]) => ProductImageFormValue[]
+  ) {
+    setForm((current) => ({
+      ...current,
+      images: normalizeFormImages(updater(current.images)),
+    }));
+  }
+
+  function addManualImage() {
+    const value = manualImageUrl.trim();
+
+    if (!value) {
+      return;
+    }
+
+    updateImages((current) => [
+      ...current,
+      {
+        url: value,
+        alt: form.name || "Product image",
+        isPrimary: current.length === 0,
+      },
+    ]);
+    setManualImageUrl("");
+  }
+
+  async function handleImageUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const files = event.target.files;
+
+    if (!files || files.length === 0) {
+      return;
+    }
+
+    setError(null);
+    setFeedback(null);
+    setUploadingMessage(
+      files.length === 1 ? "Uploading image..." : `Uploading ${files.length} images...`
+    );
+
+    try {
+      const uploadedImages: ProductImageFormValue[] = [];
+
+      for (const file of Array.from(files)) {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const response = await fetch("/api/admin/uploads", {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await readJsonResponse(response);
+
+        if (!response.ok) {
+          setError(
+            typeof data?.message === "string"
+              ? data.message
+              : "Unable to upload image."
+          );
+          return;
+        }
+
+        const url = typeof data?.url === "string" ? data.url : "";
+        const alt =
+          typeof data?.alt === "string" && data.alt.trim()
+            ? data.alt.trim()
+            : file.name.replace(/\.[^.]+$/, "");
+
+        if (!url) {
+          setError("Image uploaded, but the response was invalid.");
+          return;
+        }
+
+        uploadedImages.push({
+          url,
+          alt: alt || form.name || "Product image",
+          isPrimary: false,
+        });
+      }
+
+      updateImages((current) => [
+        ...current,
+        ...uploadedImages.map((image, index) => ({
+          ...image,
+          isPrimary: current.length === 0 && index === 0,
+        })),
+      ]);
+      setFeedback(
+        uploadedImages.length === 1 ? "Image uploaded." : "Images uploaded."
+      );
+    } catch (uploadError) {
+      setError(
+        uploadError instanceof Error
+          ? uploadError.message
+          : "Unable to upload image."
+      );
+    } finally {
+      setUploadingMessage(null);
+      event.target.value = "";
+    }
+  }
   async function handleCategorySubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
@@ -174,10 +313,10 @@ export default function AdminProductManager({
         setCategoryName("");
         setCategorySlug("");
         setFeedback("Category created.");
-      } catch (error) {
+      } catch (submitError) {
         setError(
-          error instanceof Error
-            ? error.message
+          submitError instanceof Error
+            ? submitError.message
             : "Unable to create category."
         );
       }
@@ -217,8 +356,11 @@ export default function AdminProductManager({
           tags: form.tags,
           sizes: form.sizes,
           colors: form.colors,
-          imageUrl: form.imageUrl,
-          imageAlt: form.imageAlt,
+          images: normalizeFormImages(form.images).map((image) => ({
+            url: image.url,
+            alt: image.alt,
+            isPrimary: image.isPrimary,
+          })),
           isFeatured: form.isFeatured,
           isActive: form.isActive,
           attributes,
@@ -264,9 +406,11 @@ export default function AdminProductManager({
 
         resetForm();
         setFeedback(isEditing ? "Product updated." : "Product created.");
-      } catch (error) {
+      } catch (submitError) {
         setError(
-          error instanceof Error ? error.message : "Unable to save product."
+          submitError instanceof Error
+            ? submitError.message
+            : "Unable to save product."
         );
       }
     });
@@ -302,16 +446,18 @@ export default function AdminProductManager({
         }
 
         setFeedback("Product deleted.");
-      } catch (error) {
+      } catch (deleteError) {
         setError(
-          error instanceof Error ? error.message : "Unable to delete product."
+          deleteError instanceof Error
+            ? deleteError.message
+            : "Unable to delete product."
         );
       }
     });
   }
 
   return (
-    <div className="grid gap-8 xl:grid-cols-[1.2fr_0.8fr]">
+    <div className="grid gap-8 xl:grid-cols-[1.25fr_0.75fr]">
       <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-3 border-b border-slate-200 pb-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -332,7 +478,7 @@ export default function AdminProductManager({
         </div>
 
         <div className="mt-6 overflow-hidden rounded-3xl border border-slate-200">
-          <div className="grid grid-cols-[minmax(0,2fr)_repeat(4,minmax(0,1fr))] gap-3 bg-slate-950 px-4 py-3 text-xs font-bold uppercase tracking-[0.2em] text-slate-200">
+          <div className="grid grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.8fr)_minmax(0,1fr)] gap-3 bg-slate-950 px-4 py-3 text-xs font-bold uppercase tracking-[0.2em] text-slate-200">
             <span>Product</span>
             <span>Category</span>
             <span>Price</span>
@@ -349,15 +495,34 @@ export default function AdminProductManager({
               products.map((product) => (
                 <div
                   key={product._id}
-                  className="grid grid-cols-[minmax(0,2fr)_repeat(4,minmax(0,1fr))] gap-3 px-4 py-4 text-sm text-slate-700"
+                  className="grid grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.8fr)_minmax(0,1fr)] gap-3 px-4 py-4 text-sm text-slate-700"
                 >
-                  <div>
-                    <p className="font-semibold text-slate-950">
-                      {product.name}
-                    </p>
-                    <p className="truncate text-xs text-slate-500">
-                      {product.slug}
-                    </p>
+                  <div className="flex gap-3">
+                    <div className="h-16 w-14 shrink-0 overflow-hidden rounded-2xl bg-slate-100">
+                      {product.imageUrl ? (
+                        <img
+                          src={product.imageUrl}
+                          alt={product.name}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+                          No Image
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-slate-950">
+                        {product.name}
+                      </p>
+                      <p className="truncate text-xs text-slate-500">
+                        {product.slug}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-400">
+                        {product.images.length} image
+                        {product.images.length === 1 ? "" : "s"}
+                      </p>
+                    </div>
                   </div>
                   <div className="text-slate-600">
                     {product.categoryName ?? "Unknown"}
@@ -367,7 +532,7 @@ export default function AdminProductManager({
                       ${product.price.toFixed(2)}
                     </p>
                     {product.discountPrice !== null ? (
-                      <p className="text-xs text-emerald-700">
+                      <p className="text-xs text-rose-600">
                         Sale ${product.discountPrice.toFixed(2)}
                       </p>
                     ) : null}
@@ -408,7 +573,6 @@ export default function AdminProductManager({
           </div>
         </div>
       </section>
-
       <div className="space-y-8">
         <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
@@ -450,16 +614,55 @@ export default function AdminProductManager({
           </h3>
 
           <form onSubmit={handleProductSubmit} className="mt-5 space-y-4">
-            <input value={form.name} onChange={(event) => updateField("name", event.target.value)} placeholder="Product name" className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100" />
-            <input value={form.slug} onChange={(event) => updateField("slug", event.target.value)} placeholder="product-slug" className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100" />
-            <input value={form.shortDescription} onChange={(event) => updateField("shortDescription", event.target.value)} placeholder="Short description" className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100" />
-            <textarea value={form.description} onChange={(event) => updateField("description", event.target.value)} placeholder="Description" rows={4} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100" />
+            <input
+              value={form.name}
+              onChange={(event) => updateField("name", event.target.value)}
+              placeholder="Product name"
+              className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
+            />
+            <input
+              value={form.slug}
+              onChange={(event) => updateField("slug", event.target.value)}
+              placeholder="product-slug"
+              className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
+            />
+            <input
+              value={form.shortDescription}
+              onChange={(event) =>
+                updateField("shortDescription", event.target.value)
+              }
+              placeholder="Short description"
+              className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
+            />
+            <textarea
+              value={form.description}
+              onChange={(event) => updateField("description", event.target.value)}
+              placeholder="Description"
+              rows={4}
+              className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
+            />
             <div className="grid gap-4 sm:grid-cols-2">
-              <input value={form.price} onChange={(event) => updateField("price", event.target.value)} placeholder="Price" className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100" />
-              <input value={form.discountPrice} onChange={(event) => updateField("discountPrice", event.target.value)} placeholder="Discount price" className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100" />
+              <input
+                value={form.price}
+                onChange={(event) => updateField("price", event.target.value)}
+                placeholder="Price"
+                className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
+              />
+              <input
+                value={form.discountPrice}
+                onChange={(event) =>
+                  updateField("discountPrice", event.target.value)
+                }
+                placeholder="Discount price"
+                className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
+              />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <select value={form.categoryId} onChange={(event) => updateField("categoryId", event.target.value)} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100">
+              <select
+                value={form.categoryId}
+                onChange={(event) => updateField("categoryId", event.target.value)}
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
+              >
                 <option value="">Select category</option>
                 {categories.map((category) => (
                   <option key={category._id} value={category._id}>
@@ -467,37 +670,225 @@ export default function AdminProductManager({
                   </option>
                 ))}
               </select>
-              <input value={form.brand} onChange={(event) => updateField("brand", event.target.value)} placeholder="Brand" className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100" />
+              <input
+                value={form.brand}
+                onChange={(event) => updateField("brand", event.target.value)}
+                placeholder="Brand"
+                className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
+              />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <input value={form.sku} onChange={(event) => updateField("sku", event.target.value)} placeholder="SKU" className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100" />
-              <input value={form.stock} onChange={(event) => updateField("stock", event.target.value)} placeholder="Stock" className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100" />
+              <input
+                value={form.sku}
+                onChange={(event) => updateField("sku", event.target.value)}
+                placeholder="SKU"
+                className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
+              />
+              <input
+                value={form.stock}
+                onChange={(event) => updateField("stock", event.target.value)}
+                placeholder="Stock"
+                className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
+              />
             </div>
-            <input value={form.tags} onChange={(event) => updateField("tags", event.target.value)} placeholder="Tags: new, summer, sale" className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100" />
+            <input
+              value={form.tags}
+              onChange={(event) => updateField("tags", event.target.value)}
+              placeholder="Tags: new, summer, sale"
+              className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
+            />
             <div className="grid gap-4 sm:grid-cols-2">
-              <input value={form.sizes} onChange={(event) => updateField("sizes", event.target.value)} placeholder="Sizes: S, M, L" className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100" />
-              <input value={form.colors} onChange={(event) => updateField("colors", event.target.value)} placeholder="Colors: Black, White" className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100" />
+              <input
+                value={form.sizes}
+                onChange={(event) => updateField("sizes", event.target.value)}
+                placeholder="Sizes: S, M, L"
+                className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
+              />
+              <input
+                value={form.colors}
+                onChange={(event) => updateField("colors", event.target.value)}
+                placeholder="Colors: Black, White"
+                className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
+              />
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <input value={form.imageUrl} onChange={(event) => updateField("imageUrl", event.target.value)} placeholder="Primary image URL" className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100" />
-              <input value={form.imageAlt} onChange={(event) => updateField("imageAlt", event.target.value)} placeholder="Image alt text" className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100" />
+
+            <div className="rounded-[1.6rem] border border-slate-200 p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-bold text-slate-950">Product images</p>
+                  <p className="text-xs leading-5 text-slate-500">
+                    Upload photos, choose the primary image, or paste a hosted image URL.
+                  </p>
+                </div>
+                <label className="inline-flex cursor-pointer rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800">
+                  Upload images
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    multiple
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
+                <input
+                  type="url"
+                  value={manualImageUrl}
+                  onChange={(event) => setManualImageUrl(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      addManualImage();
+                    }
+                  }}
+                  placeholder="Paste image URL and press Add"
+                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
+                />
+                <button
+                  type="button"
+                  onClick={addManualImage}
+                  className="rounded-full border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Add URL
+                </button>
+              </div>
+              {form.images.length === 0 ? (
+                <div className="mt-4 rounded-2xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">
+                  No product images added yet.
+                </div>
+              ) : (
+                <div className="mt-4 space-y-3">
+                  {form.images.map((image, index) => (
+                    <div
+                      key={`${image.url}-${index}`}
+                      className="grid gap-3 rounded-[1.4rem] border border-slate-200 p-3"
+                    >
+                      <div className="flex gap-3">
+                        <div className="h-28 w-24 shrink-0 overflow-hidden rounded-[1.2rem] bg-slate-100">
+                          <img
+                            src={image.url}
+                            alt={image.alt || form.name || `Product image ${index + 1}`}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                        <div className="min-w-0 flex-1 space-y-3">
+                          <input
+                            value={image.url}
+                            onChange={(event) =>
+                              updateImages((current) =>
+                                current.map((item, currentIndex) =>
+                                  currentIndex === index
+                                    ? { ...item, url: event.target.value }
+                                    : item
+                                )
+                              )
+                            }
+                            placeholder="Image URL"
+                            className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
+                          />
+                          <input
+                            value={image.alt}
+                            onChange={(event) =>
+                              updateImages((current) =>
+                                current.map((item, currentIndex) =>
+                                  currentIndex === index
+                                    ? { ...item, alt: event.target.value }
+                                    : item
+                                )
+                              )
+                            }
+                            placeholder="Alt text"
+                            className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
+                          />
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updateImages((current) =>
+                                  current.map((item, currentIndex) => ({
+                                    ...item,
+                                    isPrimary: currentIndex === index,
+                                  }))
+                                )
+                              }
+                              className={
+                                image.isPrimary
+                                  ? "rounded-full bg-slate-950 px-3 py-1.5 text-xs font-semibold text-white"
+                                  : "rounded-full border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                              }
+                            >
+                              {image.isPrimary ? "Primary image" : "Set primary"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updateImages((current) =>
+                                  current.filter((_, currentIndex) => currentIndex !== index)
+                                )
+                              }
+                              className="rounded-full bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-            <textarea value={form.attributes} onChange={(event) => updateField("attributes", event.target.value)} rows={6} className="w-full rounded-2xl border border-slate-200 px-4 py-3 font-mono text-sm outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100" />
+
+            <textarea
+              value={form.attributes}
+              onChange={(event) => updateField("attributes", event.target.value)}
+              rows={6}
+              className="w-full rounded-2xl border border-slate-200 px-4 py-3 font-mono text-sm outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
+            />
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="flex items-center gap-3 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700">
-                <input type="checkbox" checked={form.isFeatured} onChange={(event) => updateField("isFeatured", event.target.checked)} />
+                <input
+                  type="checkbox"
+                  checked={form.isFeatured}
+                  onChange={(event) =>
+                    updateField("isFeatured", event.target.checked)
+                  }
+                />
                 Featured product
               </label>
               <label className="flex items-center gap-3 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700">
-                <input type="checkbox" checked={form.isActive} onChange={(event) => updateField("isActive", event.target.checked)} />
+                <input
+                  type="checkbox"
+                  checked={form.isActive}
+                  onChange={(event) => updateField("isActive", event.target.checked)}
+                />
                 Visible in store
               </label>
             </div>
 
-            {error ? <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}
-            {feedback ? <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{feedback}</div> : null}
+            {uploadingMessage ? (
+              <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-700">
+                {uploadingMessage}
+              </div>
+            ) : null}
+            {error ? (
+              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                {error}
+              </div>
+            ) : null}
+            {feedback ? (
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                {feedback}
+              </div>
+            ) : null}
 
-            <button type="submit" disabled={isPending} className="w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60">
+            <button
+              type="submit"
+              disabled={isPending || Boolean(uploadingMessage)}
+              className="w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60"
+            >
               {isPending ? "Saving..." : form.id ? "Update product" : "Create product"}
             </button>
           </form>

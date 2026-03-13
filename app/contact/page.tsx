@@ -4,27 +4,26 @@ export default function ContactPage() {
       <section className="mx-auto max-w-6xl">
         <div className="text-center">
           <p className="inline-block rounded-full bg-blue-100 px-4 py-1 text-sm font-semibold text-blue-700">
-            Contact Me
+            Customer Support
           </p>
 
           <h1 className="mt-4 text-4xl font-bold text-gray-900 sm:text-5xl">
-            Let’s Work Together
+            Contact Ecommerce Store
           </h1>
 
           <p className="mx-auto mt-4 max-w-2xl text-lg text-gray-600">
-            I’m learning and building modern websites with Next.js, React, and
-            Tailwind CSS. Feel free to reach out for collaboration, project
-            ideas, or just to say hello.
+            Reach out with questions about orders, shipping, returns, product
+            availability, or wholesale inquiries.
           </p>
         </div>
 
         <div className="mt-12 grid gap-8 lg:grid-cols-2">
           <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-md">
             <h2 className="text-2xl font-bold text-gray-900">
-              Send me a message
+              Send us a message
             </h2>
             <p className="mt-3 text-gray-600">
-              Fill out the form below and I’ll get back to you soon.
+              Fill out the form below and our support team will get back to you soon.
             </p>
 
             <form className="mt-8 space-y-6">
@@ -87,47 +86,47 @@ export default function ContactPage() {
               Contact Information
             </h2>
             <p className="mt-3 text-gray-600">
-              You can also connect with me through these channels.
+              You can also reach the store through these channels.
             </p>
 
             <div className="mt-8 space-y-6">
               <div className="rounded-xl bg-slate-50 p-5">
                 <h3 className="text-lg font-semibold text-gray-900">Email</h3>
-                <p className="mt-2 text-gray-600">yourname@email.com</p>
+                <p className="mt-2 text-gray-600">support@ecommercestore.com</p>
               </div>
 
               <div className="rounded-xl bg-slate-50 p-5">
                 <h3 className="text-lg font-semibold text-gray-900">Phone</h3>
-                <p className="mt-2 text-gray-600">+855 XX XXX XXX</p>
+                <p className="mt-2 text-gray-600">+1 (555) 123-4567</p>
               </div>
 
               <div className="rounded-xl bg-slate-50 p-5">
                 <h3 className="text-lg font-semibold text-gray-900">Location</h3>
-                <p className="mt-2 text-gray-600">Phnom Penh, Cambodia</p>
+                <p className="mt-2 text-gray-600">123 Market Street, Commerce City</p>
               </div>
 
               <div className="rounded-xl bg-slate-50 p-5">
                 <h3 className="text-lg font-semibold text-gray-900">
-                  Social Links
+                  Helpful Links
                 </h3>
                 <div className="mt-3 flex flex-wrap gap-3">
                   <a
                     href="#"
                     className="rounded-lg bg-gray-900 px-4 py-2 text-white transition hover:bg-black"
                   >
-                    GitHub
+                    Order Tracking
                   </a>
                   <a
                     href="#"
                     className="rounded-lg bg-blue-600 px-4 py-2 text-white transition hover:bg-blue-700"
                   >
-                    LinkedIn
+                    Shipping Policy
                   </a>
                   <a
                     href="#"
                     className="rounded-lg bg-pink-500 px-4 py-2 text-white transition hover:bg-pink-600"
                   >
-                    Portfolio
+                    Returns
                   </a>
                 </div>
               </div>

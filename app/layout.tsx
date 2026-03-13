@@ -6,7 +6,7 @@ import Footer from "../components/Footer";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Cholna Store",
+  title: "Ecommerce Store",
   description:
     "Modern ecommerce storefront for curated products across home, workspace, and travel.",
 };

@@ -24,7 +24,7 @@ export default async function Navbar() {
                 href="/"
                 className="text-xl font-black tracking-[-0.03em] text-slate-950"
               >
-                Cholna Store
+                Ecommerce Store
               </Link>
             </div>
 

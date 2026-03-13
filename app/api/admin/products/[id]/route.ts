@@ -27,6 +27,56 @@ function parseList(value: unknown) {
     .filter(Boolean);
 }
 
+function parseImages(value: unknown, fallbackName: string) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const images = value
+    .map((item) => {
+      if (!item || typeof item !== "object") {
+        return null;
+      }
+
+      const url =
+        typeof (item as { url?: unknown }).url === "string"
+          ? (item as { url: string }).url.trim()
+          : "";
+
+      if (!url) {
+        return null;
+      }
+
+      const alt =
+        typeof (item as { alt?: unknown }).alt === "string"
+          ? (item as { alt: string }).alt.trim()
+          : "";
+
+      return {
+        url,
+        alt: alt || fallbackName,
+        isPrimary: Boolean((item as { isPrimary?: unknown }).isPrimary),
+      };
+    })
+    .filter(
+      (
+        image
+      ): image is { url: string; alt: string; isPrimary: boolean } => image !== null
+    );
+
+  if (images.length === 0) {
+    return [];
+  }
+
+  const primaryIndex = images.findIndex((image) => image.isPrimary);
+  const normalizedPrimaryIndex = primaryIndex >= 0 ? primaryIndex : 0;
+
+  return images.map((image, index) => ({
+    ...image,
+    isPrimary: index === normalizedPrimaryIndex,
+  }));
+}
+
 function normalizeAttributes(value: unknown) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return {};
@@ -131,6 +181,12 @@ async function parseUpdatePayload(body: Record<string, unknown>) {
 
   const imageUrl = typeof body.imageUrl === "string" ? body.imageUrl.trim() : "";
   const imageAlt = typeof body.imageAlt === "string" ? body.imageAlt.trim() : "";
+  const images =
+    parseImages(body.images, name).length > 0
+      ? parseImages(body.images, name)
+      : imageUrl
+        ? [{ url: imageUrl, alt: imageAlt || name, isPrimary: true }]
+        : [];
 
   return {
     data: {
@@ -154,9 +210,7 @@ async function parseUpdatePayload(body: Record<string, unknown>) {
       attributes: normalizeAttributes(body.attributes),
       isFeatured: Boolean(body.isFeatured),
       isActive: body.isActive !== false,
-      images: imageUrl
-        ? [{ url: imageUrl, alt: imageAlt || name, isPrimary: true }]
-        : [],
+      images,
     },
   };
 }

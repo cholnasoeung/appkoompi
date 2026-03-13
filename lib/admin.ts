@@ -27,6 +27,11 @@ export type AdminProductSummary = {
   description: string | null;
   attributes: Record<string, string[]>;
   imageUrl: string | null;
+  images: Array<{
+    url: string;
+    alt: string | null;
+    isPrimary: boolean;
+  }>;
   createdAt: string;
   updatedAt: string;
 };
@@ -108,7 +113,7 @@ export function serializeAdminProduct(product: {
   sizes?: string[];
   colors?: string[];
   attributes?: Map<string, string[]> | Record<string, string[]>;
-  images?: Array<{ url: string }>;
+  images?: Array<{ url: string; alt?: string | null; isPrimary?: boolean }>;
   createdAt: Date | string;
   updatedAt: Date | string;
   category?: { name?: string | null } | null;
@@ -137,7 +142,16 @@ export function serializeAdminProduct(product: {
     shortDescription: product.shortDescription ?? null,
     description: product.description ?? null,
     attributes: rawAttributes,
-    imageUrl: product.images?.[0]?.url ?? null,
+    imageUrl:
+      product.images?.find((image) => image.isPrimary)?.url ??
+      product.images?.[0]?.url ??
+      null,
+    images:
+      product.images?.map((image) => ({
+        url: image.url,
+        alt: image.alt ?? null,
+        isPrimary: Boolean(image.isPrimary),
+      })) ?? [],
     createdAt:
       product.createdAt instanceof Date
         ? product.createdAt.toISOString()

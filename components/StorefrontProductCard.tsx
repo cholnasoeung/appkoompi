@@ -16,75 +16,86 @@ export default function StorefrontProductCard({
 }) {
   const activePrice = product.discountPrice ?? product.price;
   const hasDiscount = product.discountPrice !== null;
+  const discountPercent = hasDiscount
+    ? Math.round(((product.price - activePrice) / product.price) * 100)
+    : null;
 
   return (
-    <article className="group overflow-hidden rounded-[1.6rem] border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(15,23,42,0.12)]">
-      <div className="relative">
-        <div className="absolute left-4 top-4 z-10 flex flex-wrap gap-2">
-          {hasDiscount ? (
-            <span className="rounded-full bg-rose-500 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-white">
-              Sale
+    <article className="group overflow-hidden bg-white transition hover:-translate-y-1">
+      <div className="relative overflow-hidden rounded-[1.4rem] bg-[#f3f3f3]">
+        <div className="absolute left-3 top-3 z-10 flex flex-wrap gap-2">
+          {discountPercent ? (
+            <span className="rounded-sm bg-red-500 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white">
+              -{discountPercent}%
             </span>
           ) : null}
           {product.isFeatured ? (
-            <span className="rounded-full bg-slate-950 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-white">
-              Featured
+            <span className="rounded-sm bg-black px-2 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white">
+              Hot
             </span>
           ) : null}
         </div>
 
-        <div className="flex h-72 items-end bg-[linear-gradient(135deg,_#f8fafc,_#e2e8f0_55%,_#fde68a)] p-6">
-          <div className="w-full rounded-[1.3rem] bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.95),_transparent_30%),linear-gradient(135deg,_#0f172a,_#334155_55%,_#cbd5e1)] p-5 text-white shadow-inner">
-            <p className="text-xs uppercase tracking-[0.22em] text-slate-200">
+        <div className={compact ? "aspect-[3/4]" : "aspect-[4/5]"}>
+          {product.imageUrl ? (
+            <img
+              src={product.imageUrl}
+              alt={product.name}
+              className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(180deg,_#f8fafc,_#e2e8f0)] text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
+              No Image
+            </div>
+          )}
+        </div>
+
+        <p className="absolute bottom-5 right-[-1.6rem] rotate-90 text-[10px] font-semibold uppercase tracking-[0.28em] text-slate-700">
+          {product.brand ?? "Store"}
+        </p>
+      </div>
+
+      <div className={compact ? "space-y-3 px-1 pb-1 pt-3" : "space-y-4 px-1 pb-1 pt-4"}>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
               {product.categoryName}
             </p>
-            <h3 className="mt-3 text-2xl font-black tracking-[-0.04em]">
+            <h3 className="mt-1 text-base font-semibold leading-6 text-black sm:text-lg">
               {product.name}
             </h3>
           </div>
+          <button
+            type="button"
+            aria-label={`Save ${product.name}`}
+            className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:border-slate-300 hover:text-slate-900"
+          >
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M12.62 20.55a1 1 0 0 1-1.24 0C6.3 16.44 3 13.39 3 9.5A4.5 4.5 0 0 1 7.5 5c1.74 0 3.13.81 4.5 2.09A6.16 6.16 0 0 1 16.5 5 4.5 4.5 0 0 1 21 9.5c0 3.89-3.3 6.94-8.38 11.05Z" />
+            </svg>
+          </button>
         </div>
-      </div>
 
-      <div className={compact ? "space-y-4 p-5" : "space-y-5 p-6"}>
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-            {product.brand ?? "Cholna Select"}
-          </p>
-          <p className="text-sm leading-6 text-slate-600">
-            {compact ? product.shortDescription : product.description}
-          </p>
+        <p className="text-sm leading-6 text-slate-600">
+          {compact ? product.shortDescription : product.description}
+        </p>
+
+        <div className="flex items-center gap-2 text-sm">
+          <p className="font-bold text-red-600">US {formatPrice(activePrice)}</p>
+          {hasDiscount ? (
+            <p className="text-slate-400 line-through">US {formatPrice(product.price)}</p>
+          ) : null}
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {product.tags.slice(0, 2).map((tag) => (
+          {product.sizes.slice(0, 4).map((size) => (
             <span
-              key={tag}
-              className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-600"
+              key={size}
+              className="min-w-9 rounded-sm border border-slate-300 px-2 py-1 text-center text-[11px] font-medium text-slate-700"
             >
-              {tag}
+              {size}
             </span>
           ))}
-        </div>
-
-        <div className="flex items-end justify-between gap-4">
-          <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
-              Price
-            </p>
-            <div className="flex items-center gap-2">
-              <p className="text-2xl font-black tracking-[-0.04em] text-slate-950">
-                {formatPrice(activePrice)}
-              </p>
-              {hasDiscount ? (
-                <p className="text-sm text-slate-400 line-through">
-                  {formatPrice(product.price)}
-                </p>
-              ) : null}
-            </div>
-          </div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">
-            {product.ratingAverage.toFixed(1)} / 5
-          </p>
         </div>
 
         <AddToCartButton
@@ -92,7 +103,7 @@ export default function StorefrontProductCard({
           productName={product.name}
           sizes={product.sizes}
           colors={product.colors}
-          className="w-full rounded-full bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-none bg-black px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
         />
       </div>
     </article>
