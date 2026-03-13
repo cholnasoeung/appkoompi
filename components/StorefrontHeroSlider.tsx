@@ -49,7 +49,7 @@ export default function StorefrontHeroSlider({
           onMouseLeave={() => setIsPaused(false)}
           className="relative overflow-hidden rounded-[1.5rem] border border-slate-200 shadow-[0_30px_90px_rgba(15,23,42,0.14)] sm:rounded-[2rem]"
         >
-          <div className="relative h-[clamp(14rem,52vw,34rem)] min-h-[14rem] sm:h-[clamp(18rem,46vw,36rem)] lg:h-[clamp(22rem,42vw,38rem)]">
+          <div className="relative h-[clamp(12.5rem,48vw,30rem)] min-h-[12.5rem] sm:h-[clamp(16rem,40vw,31rem)] lg:h-[clamp(19rem,36vw,33rem)]">
             <img
               src={activeSlide.imageUrl}
               alt={activeSlide.title}
