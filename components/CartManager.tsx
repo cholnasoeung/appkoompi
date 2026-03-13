@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import type { CartLine } from "@/lib/cart";
 
@@ -230,12 +231,12 @@ export default function CartManager({
           </div>
         ) : null}
 
-        <button
-          type="button"
-          className="mt-6 w-full rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-950"
+        <Link
+          href="/checkout"
+          className="mt-6 block w-full rounded-2xl bg-white px-4 py-3 text-center text-sm font-semibold text-slate-950"
         >
           Proceed to checkout
-        </button>
+        </Link>
       </aside>
     </div>
   );
