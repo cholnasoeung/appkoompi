@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { CartLine } from "@/lib/cart";
 
@@ -30,6 +31,7 @@ export default function CartManager({
 }: {
   initialItems: CartLine[];
 }) {
+  const router = useRouter();
   const [items, setItems] = useState(initialItems);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -82,6 +84,7 @@ export default function CartManager({
                 : item
             )
       );
+      router.refresh();
     });
   }
 
@@ -116,6 +119,7 @@ export default function CartManager({
             )
         )
       );
+      router.refresh();
     });
   }
 

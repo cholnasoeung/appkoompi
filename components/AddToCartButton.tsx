@@ -1,6 +1,7 @@
 "use client";
 
 import { signIn, useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 type AddToCartButtonProps = {
@@ -33,6 +34,7 @@ export default function AddToCartButton({
   className,
 }: AddToCartButtonProps) {
   const { data: session, status } = useSession();
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [selectedSize, setSelectedSize] = useState<string | null>(sizes[0] ?? null);
   const [selectedColor, setSelectedColor] = useState<string | null>(colors[0] ?? null);
@@ -82,6 +84,7 @@ export default function AddToCartButton({
 
       setMessage("Added to cart");
       setIsOpen(false);
+      router.refresh();
     });
   }
 

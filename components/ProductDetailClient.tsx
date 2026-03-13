@@ -2,6 +2,7 @@
 
 import { signIn, useSession } from "next-auth/react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import type { StorefrontProduct } from "@/lib/storefront";
 
@@ -31,6 +32,7 @@ export default function ProductDetailClient({
   product,
 }: ProductDetailClientProps) {
   const { data: session, status } = useSession();
+  const router = useRouter();
   const gallery = useMemo(() => {
     if (product.images.length > 0) {
       return product.images;
@@ -107,6 +109,7 @@ export default function ProductDetailClient({
       }
 
       setMessage("Added to cart.");
+      router.refresh();
     });
   }
 
