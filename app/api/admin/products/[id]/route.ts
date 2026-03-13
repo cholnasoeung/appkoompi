@@ -27,6 +27,20 @@ function parseList(value: unknown) {
     .filter(Boolean);
 }
 
+function parseTargetGender(value: unknown) {
+  if (typeof value !== "string") {
+    return "unisex" as const;
+  }
+
+  const normalized = value.trim().toLowerCase();
+
+  if (normalized === "men" || normalized === "women" || normalized === "unisex") {
+    return normalized;
+  }
+
+  return null;
+}
+
 function parseImages(value: unknown, fallbackName: string) {
   if (!Array.isArray(value)) {
     return [];
@@ -137,6 +151,7 @@ async function parseUpdatePayload(body: Record<string, unknown>) {
   const sku = typeof body.sku === "string" ? body.sku.trim() : "";
   const price = Number(body.price);
   const stock = Number(body.stock);
+  const targetGender = parseTargetGender(body.targetGender);
   const discountPrice =
     body.discountPrice === null || body.discountPrice === ""
       ? null
@@ -173,6 +188,10 @@ async function parseUpdatePayload(body: Record<string, unknown>) {
     return { error: "Stock must be a valid non-negative number." };
   }
 
+  if (targetGender === null) {
+    return { error: "Target gender must be men, women, or unisex." };
+  }
+
   const category = await Category.findById(categoryId);
 
   if (!category) {
@@ -207,6 +226,7 @@ async function parseUpdatePayload(body: Record<string, unknown>) {
       tags: parseList(body.tags),
       sizes: parseList(body.sizes),
       colors: parseList(body.colors),
+      targetGender,
       attributes: normalizeAttributes(body.attributes),
       isFeatured: Boolean(body.isFeatured),
       isActive: body.isActive !== false,

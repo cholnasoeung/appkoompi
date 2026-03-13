@@ -26,6 +26,7 @@ export interface IProduct extends Document {
   attributes: Map<string, string[]>;
   sizes: string[];
   colors: string[];
+  targetGender: "men" | "women" | "unisex";
   createdAt: Date;
   updatedAt: Date;
 }
@@ -156,6 +157,12 @@ const ProductSchema = new Schema<IProduct>(
       type: [String],
       default: [],
     },
+    targetGender: {
+      type: String,
+      enum: ["men", "women", "unisex"],
+      default: "unisex",
+      index: true,
+    },
   },
   {
     timestamps: true,
@@ -187,7 +194,8 @@ const shouldRecompileProductModel =
   (existingProductModel &&
     (!existingProductModel.schema.path("slug") ||
       !existingProductModel.schema.path("sku") ||
-      !existingProductModel.schema.path("categoryId")));
+      !existingProductModel.schema.path("categoryId") ||
+      !existingProductModel.schema.path("targetGender")));
 
 if (shouldRecompileProductModel && mongoose.models.Product) {
   delete mongoose.models.Product;

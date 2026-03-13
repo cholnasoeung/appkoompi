@@ -24,6 +24,7 @@ export type AdminProductSummary = {
   tags: string[];
   sizes: string[];
   colors: string[];
+  targetGender: "men" | "women" | "unisex";
   shortDescription: string | null;
   description: string | null;
   attributes: Record<string, string[]>;
@@ -155,6 +156,7 @@ export function serializeAdminProduct(product: {
   tags?: string[];
   sizes?: string[];
   colors?: string[];
+  targetGender?: "men" | "women" | "unisex";
   attributes?: Map<string, string[]> | Record<string, string[]>;
   images?: Array<{ url: string; alt?: string | null; isPrimary?: boolean }>;
   createdAt: Date | string;
@@ -182,6 +184,7 @@ export function serializeAdminProduct(product: {
     tags: product.tags ?? [],
     sizes: product.sizes ?? [],
     colors: product.colors ?? [],
+    targetGender: product.targetGender ?? "unisex",
     shortDescription: product.shortDescription ?? null,
     description: product.description ?? null,
     attributes: rawAttributes,

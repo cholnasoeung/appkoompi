@@ -13,6 +13,7 @@ type CatalogPageProps = {
     category?: string;
     size?: string;
     color?: string;
+    gender?: "men" | "women" | "unisex";
     sort?: CatalogSortOption;
     page?: string;
   }>;
@@ -40,6 +41,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   const currentCategory = resolvedSearchParams.category?.trim() ?? "";
   const currentSize = resolvedSearchParams.size?.trim() ?? "";
   const currentColor = resolvedSearchParams.color?.trim() ?? "";
+  const currentGender = resolvedSearchParams.gender?.trim() ?? "";
   const currentSort = resolvedSearchParams.sort ?? "latest";
   const currentPage = Number(resolvedSearchParams.page ?? "1") || 1;
 
@@ -57,6 +59,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
     category: currentCategory,
     size: currentSize,
     color: currentColor,
+    gender: currentGender as "men" | "women" | "unisex" | "",
     sort: currentSort,
     page: currentPage,
     pageSize: 9,
@@ -67,6 +70,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
     category: currentCategory || undefined,
     size: currentSize || undefined,
     color: currentColor || undefined,
+    gender: currentGender || undefined,
     sort: currentSort || undefined,
   };
 
@@ -173,6 +177,23 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                       {color}
                     </option>
                   ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="gender" className="text-sm font-semibold text-slate-800">
+                  For
+                </label>
+                <select
+                  id="gender"
+                  name="gender"
+                  defaultValue={currentGender}
+                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
+                >
+                  <option value="">All</option>
+                  <option value="women">Women</option>
+                  <option value="men">Men</option>
+                  <option value="unisex">Unisex</option>
                 </select>
               </div>
 

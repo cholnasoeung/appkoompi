@@ -28,6 +28,7 @@ type FormState = {
   tags: string;
   sizes: string;
   colors: string;
+  targetGender: "men" | "women" | "unisex";
   isFeatured: boolean;
   isActive: boolean;
   attributes: string;
@@ -49,6 +50,7 @@ const emptyForm: FormState = {
   tags: "",
   sizes: "",
   colors: "",
+  targetGender: "unisex",
   isFeatured: false,
   isActive: true,
   attributes: "{}",
@@ -108,6 +110,7 @@ function productToFormState(product: AdminProductSummary): FormState {
     tags: toCommaSeparated(product.tags),
     sizes: toCommaSeparated(product.sizes),
     colors: toCommaSeparated(product.colors),
+    targetGender: product.targetGender,
     isFeatured: product.isFeatured,
     isActive: product.isActive,
     attributes: JSON.stringify(product.attributes, null, 2),
@@ -356,6 +359,7 @@ export default function AdminProductManager({
           tags: form.tags,
           sizes: form.sizes,
           colors: form.colors,
+          targetGender: form.targetGender,
           images: normalizeFormImages(form.images).map((image) => ({
             url: image.url,
             alt: image.alt,
@@ -691,6 +695,20 @@ export default function AdminProductManager({
                 className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
               />
             </div>
+            <select
+              value={form.targetGender}
+              onChange={(event) =>
+                updateField(
+                  "targetGender",
+                  event.target.value as "men" | "women" | "unisex"
+                )
+              }
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
+            >
+              <option value="unisex">Unisex</option>
+              <option value="women">Women</option>
+              <option value="men">Men</option>
+            </select>
             <input
               value={form.tags}
               onChange={(event) => updateField("tags", event.target.value)}

@@ -21,6 +21,7 @@ export type StorefrontProduct = {
   isFeatured: boolean;
   sizes: string[];
   colors: string[];
+  targetGender: "men" | "women" | "unisex";
   images: Array<{
     url: string;
     alt: string | null;
@@ -58,6 +59,7 @@ export type StorefrontCatalogQuery = {
   category?: string;
   size?: string;
   color?: string;
+  gender?: "men" | "women" | "unisex" | "";
   sort?: CatalogSortOption;
   page?: number;
   pageSize?: number;
@@ -110,6 +112,7 @@ const fallbackProducts: StorefrontProduct[] = [
     isFeatured: true,
     sizes: ["S", "M", "L", "XL"],
     colors: ["Black", "Stone"],
+    targetGender: "unisex",
     images: [],
   },
   {
@@ -129,6 +132,7 @@ const fallbackProducts: StorefrontProduct[] = [
     isFeatured: true,
     sizes: ["S", "M", "L"],
     colors: ["Ivory", "Olive"],
+    targetGender: "unisex",
     images: [],
   },
   {
@@ -148,6 +152,7 @@ const fallbackProducts: StorefrontProduct[] = [
     isFeatured: true,
     sizes: ["S", "M", "L"],
     colors: ["Sand", "Black"],
+    targetGender: "women",
     images: [],
   },
   {
@@ -167,6 +172,7 @@ const fallbackProducts: StorefrontProduct[] = [
     isFeatured: false,
     sizes: [],
     colors: ["Black", "Tan"],
+    targetGender: "men",
     images: [],
   },
   {
@@ -186,6 +192,7 @@ const fallbackProducts: StorefrontProduct[] = [
     isFeatured: false,
     sizes: ["28", "30", "32", "34"],
     colors: ["Charcoal", "Khaki"],
+    targetGender: "unisex",
     images: [],
   },
   {
@@ -205,6 +212,7 @@ const fallbackProducts: StorefrontProduct[] = [
     isFeatured: true,
     sizes: ["S", "M", "L", "XL"],
     colors: ["Brown", "Cream"],
+    targetGender: "women",
     images: [],
   },
 ];
@@ -248,6 +256,7 @@ function mapProduct(product: {
   isFeatured: boolean;
   sizes?: string[];
   colors?: string[];
+  targetGender?: "men" | "women" | "unisex";
   categoryId:
     | { _id?: { toString(): string }; name?: string | null }
     | { toString(): string };
@@ -276,6 +285,7 @@ function mapProduct(product: {
     isFeatured: product.isFeatured,
     sizes: product.sizes ?? [],
     colors: product.colors ?? [],
+    targetGender: product.targetGender ?? "unisex",
     images:
       product.images?.map((image) => ({
         url: image.url,
@@ -346,6 +356,30 @@ export async function getStorefrontData() {
       latestProducts: fallbackProducts,
       usesFallback: true,
     };
+  }
+}
+
+export async function getStorefrontCategories() {
+  const configurationError = getDatabaseConfigurationError();
+
+  if (configurationError) {
+    return fallbackCategories;
+  }
+
+  try {
+    await connectToDatabase();
+
+    const categories = await Category.find({ isActive: true }).sort({ name: 1 }).limit(10).lean();
+    const mappedCategories = categories.map((category) => ({
+      _id: category._id.toString(),
+      name: category.name,
+      slug: category.slug,
+      description: category.description ?? "Curated pieces for modern everyday use.",
+    }));
+
+    return mappedCategories.length > 0 ? mappedCategories : fallbackCategories;
+  } catch {
+    return fallbackCategories;
   }
 }
 
@@ -500,6 +534,10 @@ function matchesCatalogFilters(
     return false;
   }
 
+  if (filters.gender && product.targetGender !== filters.gender) {
+    return false;
+  }
+
   return true;
 }
 
@@ -529,13 +567,14 @@ export async function getStorefrontCatalog({
   category = "",
   size = "",
   color = "",
+  gender = "",
   sort = "latest",
   page = 1,
   pageSize = 9,
 }: StorefrontCatalogQuery = {}) {
   const normalizedPage = Math.max(1, page);
   const normalizedPageSize = Math.max(1, pageSize);
-  const filters = { query, category, size, color, sort };
+  const filters = { query, category, size, color, gender, sort };
   const configurationError = getDatabaseConfigurationError();
 
   if (configurationError) {
@@ -604,6 +643,10 @@ export async function getStorefrontCatalog({
 
     if (color) {
       mongoQuery.colors = color;
+    }
+
+    if (gender) {
+      mongoQuery.targetGender = gender;
     }
 
     const sortBy: Array<[string, 1 | -1]> =
