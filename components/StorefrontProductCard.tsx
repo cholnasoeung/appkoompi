@@ -1,7 +1,7 @@
 "use client";
 
-import AddToCartButton from "@/components/AddToCartButton";
 import type { StorefrontProduct } from "@/lib/storefront";
+import Link from "next/link";
 
 function formatPrice(price: number) {
   return `$${price.toFixed(2)}`;
@@ -36,7 +36,7 @@ export default function StorefrontProductCard({
           ) : null}
         </div>
 
-        <div className={compact ? "aspect-[3/4]" : "aspect-[4/5]"}>
+        <Link href={`/products/${product.slug}`} className={compact ? "block aspect-[3/4]" : "block aspect-[4/5]"}>
           {product.imageUrl ? (
             <img
               src={product.imageUrl}
@@ -48,7 +48,7 @@ export default function StorefrontProductCard({
               No Image
             </div>
           )}
-        </div>
+        </Link>
 
         <p className="absolute bottom-5 right-[-1.6rem] rotate-90 text-[10px] font-semibold uppercase tracking-[0.28em] text-slate-700">
           {product.brand ?? "Store"}
@@ -61,9 +61,9 @@ export default function StorefrontProductCard({
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
               {product.categoryName}
             </p>
-            <h3 className="mt-1 text-base font-semibold leading-6 text-black sm:text-lg">
+            <Link href={`/products/${product.slug}`} className="mt-1 block text-base font-semibold leading-6 text-black sm:text-lg">
               {product.name}
-            </h3>
+            </Link>
           </div>
           <button
             type="button"
@@ -98,13 +98,12 @@ export default function StorefrontProductCard({
           ))}
         </div>
 
-        <AddToCartButton
-          productId={product._id}
-          productName={product.name}
-          sizes={product.sizes}
-          colors={product.colors}
-          className="w-full rounded-none bg-black px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-        />
+        <Link
+          href={`/products/${product.slug}`}
+          className="block w-full rounded-none bg-black px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-slate-800"
+        >
+          View details
+        </Link>
       </div>
     </article>
   );

@@ -20,6 +20,11 @@ export type StorefrontProduct = {
   isFeatured: boolean;
   sizes: string[];
   colors: string[];
+  images: Array<{
+    url: string;
+    alt: string | null;
+    isPrimary: boolean;
+  }>;
 };
 
 export type StorefrontCategory = {
@@ -68,6 +73,7 @@ const fallbackProducts: StorefrontProduct[] = [
     isFeatured: true,
     sizes: ["S", "M", "L", "XL"],
     colors: ["Black", "Stone"],
+    images: [],
   },
   {
     _id: "2",
@@ -86,6 +92,7 @@ const fallbackProducts: StorefrontProduct[] = [
     isFeatured: true,
     sizes: ["S", "M", "L"],
     colors: ["Ivory", "Olive"],
+    images: [],
   },
   {
     _id: "3",
@@ -104,6 +111,7 @@ const fallbackProducts: StorefrontProduct[] = [
     isFeatured: true,
     sizes: ["S", "M", "L"],
     colors: ["Sand", "Black"],
+    images: [],
   },
   {
     _id: "4",
@@ -122,6 +130,7 @@ const fallbackProducts: StorefrontProduct[] = [
     isFeatured: false,
     sizes: [],
     colors: ["Black", "Tan"],
+    images: [],
   },
   {
     _id: "5",
@@ -140,6 +149,7 @@ const fallbackProducts: StorefrontProduct[] = [
     isFeatured: false,
     sizes: ["28", "30", "32", "34"],
     colors: ["Charcoal", "Khaki"],
+    images: [],
   },
   {
     _id: "6",
@@ -158,6 +168,7 @@ const fallbackProducts: StorefrontProduct[] = [
     isFeatured: true,
     sizes: ["S", "M", "L", "XL"],
     colors: ["Brown", "Cream"],
+    images: [],
   },
 ];
 
@@ -170,7 +181,7 @@ function mapProduct(product: {
   price: number;
   discountPrice?: number | null;
   brand?: string | null;
-  images?: Array<{ url: string; isPrimary: boolean }>;
+  images?: Array<{ url: string; alt?: string | null; isPrimary: boolean }>;
   ratingAverage?: number;
   reviewCount?: number;
   tags?: string[];
@@ -205,6 +216,12 @@ function mapProduct(product: {
     isFeatured: product.isFeatured,
     sizes: product.sizes ?? [],
     colors: product.colors ?? [],
+    images:
+      product.images?.map((image) => ({
+        url: image.url,
+        alt: image.alt ?? null,
+        isPrimary: image.isPrimary,
+      })) ?? [],
   } satisfies StorefrontProduct;
 }
 
@@ -267,6 +284,83 @@ export async function getStorefrontData() {
       categories: fallbackCategories,
       featuredProducts: fallbackProducts.filter((product) => product.isFeatured).slice(0, 4),
       latestProducts: fallbackProducts,
+      usesFallback: true,
+    };
+  }
+}
+
+export async function getStorefrontProductBySlug(slug: string) {
+  const normalizedSlug = slug.trim().toLowerCase();
+  const fallbackProduct =
+    fallbackProducts.find((product) => product.slug === normalizedSlug) ?? null;
+
+  const configurationError = getDatabaseConfigurationError();
+
+  if (configurationError) {
+    return {
+      product: fallbackProduct,
+      relatedProducts: fallbackProducts
+        .filter((product) => product.slug !== normalizedSlug)
+        .slice(0, 4),
+      usesFallback: true,
+    };
+  }
+
+  try {
+    await connectToDatabase();
+
+    const product = await Product.findOne({
+      slug: normalizedSlug,
+      isActive: true,
+    })
+      .populate("categoryId", "name _id")
+      .lean();
+
+    if (!product) {
+      return {
+        product: fallbackProduct,
+        relatedProducts: fallbackProducts
+          .filter((item) => item.slug !== normalizedSlug)
+          .slice(0, 4),
+        usesFallback: Boolean(fallbackProduct),
+      };
+    }
+
+    const mappedProduct = mapProduct(product);
+    const categoryId =
+      product.categoryId &&
+      typeof product.categoryId === "object" &&
+      "_id" in product.categoryId &&
+      product.categoryId._id
+        ? product.categoryId._id
+        : null;
+
+    const relatedProducts = await Product.find({
+      _id: { $ne: product._id },
+      isActive: true,
+      ...(categoryId ? { categoryId } : {}),
+    })
+      .populate("categoryId", "name")
+      .sort({ updatedAt: -1 })
+      .limit(4)
+      .lean();
+
+    return {
+      product: mappedProduct,
+      relatedProducts:
+        relatedProducts.length > 0
+          ? relatedProducts.map(mapProduct)
+          : fallbackProducts
+              .filter((item) => item.slug !== normalizedSlug)
+              .slice(0, 4),
+      usesFallback: false,
+    };
+  } catch {
+    return {
+      product: fallbackProduct,
+      relatedProducts: fallbackProducts
+        .filter((product) => product.slug !== normalizedSlug)
+        .slice(0, 4),
       usesFallback: true,
     };
   }
