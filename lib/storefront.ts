@@ -34,6 +34,31 @@ export type StorefrontCategory = {
   description: string;
 };
 
+export type CatalogSortOption =
+  | "latest"
+  | "price-asc"
+  | "price-desc"
+  | "name-asc"
+  | "name-desc";
+
+export type StorefrontCatalogQuery = {
+  query?: string;
+  category?: string;
+  size?: string;
+  color?: string;
+  sort?: CatalogSortOption;
+  page?: number;
+  pageSize?: number;
+};
+
+function normalizeCatalogSlug(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 const fallbackCategories: StorefrontCategory[] = [
   {
     _id: "living",
@@ -361,6 +386,214 @@ export async function getStorefrontProductBySlug(slug: string) {
       relatedProducts: fallbackProducts
         .filter((product) => product.slug !== normalizedSlug)
         .slice(0, 4),
+      usesFallback: true,
+    };
+  }
+}
+
+function matchesCatalogFilters(
+  product: StorefrontProduct,
+  filters: Required<Omit<StorefrontCatalogQuery, "page" | "pageSize">>
+) {
+  const normalizedQuery = filters.query.trim().toLowerCase();
+
+  if (
+    normalizedQuery &&
+    ![
+      product.name,
+      product.shortDescription,
+      product.description,
+      product.brand ?? "",
+      product.categoryName,
+      ...product.tags,
+    ]
+      .join(" ")
+      .toLowerCase()
+      .includes(normalizedQuery)
+  ) {
+    return false;
+  }
+
+  if (
+    filters.category &&
+    normalizeCatalogSlug(product.categoryName) !== normalizeCatalogSlug(filters.category)
+  ) {
+    return false;
+  }
+
+  if (filters.size && !product.sizes.some((size) => size.toLowerCase() === filters.size.toLowerCase())) {
+    return false;
+  }
+
+  if (
+    filters.color &&
+    !product.colors.some((color) => color.toLowerCase() === filters.color.toLowerCase())
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+function sortCatalogProducts(products: StorefrontProduct[], sort: CatalogSortOption) {
+  return [...products].sort((left, right) => {
+    const leftPrice = left.discountPrice ?? left.price;
+    const rightPrice = right.discountPrice ?? right.price;
+
+    switch (sort) {
+      case "price-asc":
+        return leftPrice - rightPrice;
+      case "price-desc":
+        return rightPrice - leftPrice;
+      case "name-asc":
+        return left.name.localeCompare(right.name);
+      case "name-desc":
+        return right.name.localeCompare(left.name);
+      case "latest":
+      default:
+        return 0;
+    }
+  });
+}
+
+export async function getStorefrontCatalog({
+  query = "",
+  category = "",
+  size = "",
+  color = "",
+  sort = "latest",
+  page = 1,
+  pageSize = 9,
+}: StorefrontCatalogQuery = {}) {
+  const normalizedPage = Math.max(1, page);
+  const normalizedPageSize = Math.max(1, pageSize);
+  const filters = { query, category, size, color, sort };
+  const configurationError = getDatabaseConfigurationError();
+
+  if (configurationError) {
+    const filteredProducts = sortCatalogProducts(
+      fallbackProducts.filter((product) => matchesCatalogFilters(product, filters)),
+      sort
+    );
+    const totalProducts = filteredProducts.length;
+    const totalPages = Math.max(1, Math.ceil(totalProducts / normalizedPageSize));
+    const currentPage = Math.min(normalizedPage, totalPages);
+    const paginatedProducts = filteredProducts.slice(
+      (currentPage - 1) * normalizedPageSize,
+      currentPage * normalizedPageSize
+    );
+
+    return {
+      products: paginatedProducts,
+      categories: fallbackCategories,
+      totalProducts,
+      totalPages,
+      currentPage,
+      availableSizes: Array.from(new Set(fallbackProducts.flatMap((product) => product.sizes))).sort(),
+      availableColors: Array.from(new Set(fallbackProducts.flatMap((product) => product.colors))).sort(),
+      usesFallback: true,
+    };
+  }
+
+  try {
+    await connectToDatabase();
+
+    const categoryDocs = await Category.find({ isActive: true }).sort({ name: 1 }).lean();
+    const categories = categoryDocs.map((category) => ({
+      _id: category._id.toString(),
+      name: category.name,
+      slug: category.slug,
+      description: category.description ?? "Curated pieces for modern everyday use.",
+    }));
+
+    const categoryDoc = category
+      ? categoryDocs.find(
+          (item) =>
+            item.slug.toLowerCase() === category.toLowerCase() ||
+            item.name.toLowerCase() === category.toLowerCase()
+        )
+      : null;
+
+    const mongoQuery: Record<string, unknown> = { isActive: true };
+
+    if (query.trim()) {
+      mongoQuery.$or = [
+        { name: { $regex: query.trim(), $options: "i" } },
+        { shortDescription: { $regex: query.trim(), $options: "i" } },
+        { description: { $regex: query.trim(), $options: "i" } },
+        { brand: { $regex: query.trim(), $options: "i" } },
+        { tags: { $in: [new RegExp(query.trim(), "i")] } },
+      ];
+    }
+
+    if (categoryDoc) {
+      mongoQuery.categoryId = categoryDoc._id;
+    }
+
+    if (size) {
+      mongoQuery.sizes = size;
+    }
+
+    if (color) {
+      mongoQuery.colors = color;
+    }
+
+    const sortBy: Array<[string, 1 | -1]> =
+      sort === "price-asc"
+        ? [["price", 1]]
+        : sort === "price-desc"
+          ? [["price", -1]]
+          : sort === "name-asc"
+            ? [["name", 1]]
+            : sort === "name-desc"
+              ? [["name", -1]]
+              : [["createdAt", -1]];
+
+    const [totalProducts, productDocs, sizeDocs, colorDocs] = await Promise.all([
+      Product.countDocuments(mongoQuery),
+      Product.find(mongoQuery)
+        .populate("categoryId", "name")
+        .sort(sortBy)
+        .skip((normalizedPage - 1) * normalizedPageSize)
+        .limit(normalizedPageSize)
+        .lean(),
+      Product.distinct("sizes", { isActive: true }),
+      Product.distinct("colors", { isActive: true }),
+    ]);
+
+    const totalPages = Math.max(1, Math.ceil(totalProducts / normalizedPageSize));
+    const currentPage = Math.min(normalizedPage, totalPages);
+
+    return {
+      products: productDocs.map(mapProduct),
+      categories: categories.length > 0 ? categories : fallbackCategories,
+      totalProducts,
+      totalPages,
+      currentPage,
+      availableSizes: (sizeDocs as string[]).filter(Boolean).sort(),
+      availableColors: (colorDocs as string[]).filter(Boolean).sort(),
+      usesFallback: false,
+    };
+  } catch {
+    const filteredProducts = sortCatalogProducts(
+      fallbackProducts.filter((product) => matchesCatalogFilters(product, filters)),
+      sort
+    );
+    const totalProducts = filteredProducts.length;
+    const totalPages = Math.max(1, Math.ceil(totalProducts / normalizedPageSize));
+    const currentPage = Math.min(normalizedPage, totalPages);
+
+    return {
+      products: filteredProducts.slice(
+        (currentPage - 1) * normalizedPageSize,
+        currentPage * normalizedPageSize
+      ),
+      categories: fallbackCategories,
+      totalProducts,
+      totalPages,
+      currentPage,
+      availableSizes: Array.from(new Set(fallbackProducts.flatMap((product) => product.sizes))).sort(),
+      availableColors: Array.from(new Set(fallbackProducts.flatMap((product) => product.colors))).sort(),
       usesFallback: true,
     };
   }

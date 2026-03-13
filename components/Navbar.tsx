@@ -42,16 +42,16 @@ export default async function Navbar() {
                 Home
               </Link>
               <Link
-                href="/#collections"
+                href="/catalog"
                 className="rounded-full px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
               >
-                Collections
+                Catalog
               </Link>
               <Link
-                href="/#featured"
+                href="/catalog?sort=latest"
                 className="rounded-full px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
               >
-                Featured
+                New Arrivals
               </Link>
               {user?.role === "admin" ? (
                 <Link

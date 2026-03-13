@@ -99,7 +99,7 @@ export default async function HomePage() {
                 {category.description}
               </p>
               <Link
-                href="#featured"
+                href={`/catalog?category=${category.slug}`}
                 className="mt-5 inline-flex rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
               >
                 Explore collection
@@ -120,10 +120,10 @@ export default async function HomePage() {
             </h2>
           </div>
           <Link
-            href="/register"
+            href="/catalog"
             className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
           >
-            Unlock member pricing
+            Browse full catalog
           </Link>
         </div>
 
@@ -182,6 +182,15 @@ export default async function HomePage() {
           <p className="max-w-xl text-sm leading-6 text-slate-600">
             A rotating set of recent products and restocks to keep the storefront current.
           </p>
+        </div>
+
+        <div className="mt-4">
+          <Link
+            href="/catalog?sort=latest"
+            className="inline-flex rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+          >
+            View all products
+          </Link>
         </div>
 
         <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
