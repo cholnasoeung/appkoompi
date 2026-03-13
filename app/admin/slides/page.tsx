@@ -9,7 +9,7 @@ export default async function AdminSlidesPage() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-[1.8rem] border border-slate-200 bg-[linear-gradient(135deg,_#0f172a,_#7c3aed_52%,_#eef2ff)] p-6 text-white">
+      {/* <section className="rounded-[1.8rem] border border-slate-200 bg-[linear-gradient(135deg,_#0f172a,_#7c3aed_52%,_#eef2ff)] p-6 text-white">
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-100">
           Slider
         </p>
@@ -19,7 +19,7 @@ export default async function AdminSlidesPage() {
         <p className="mt-3 max-w-2xl text-sm leading-6 text-violet-50">
           Upload hero images, add multiple slides, control order, and keep the homepage slider rotating automatically.
         </p>
-      </section>
+      </section> */}
 
       <AdminSlideManager initialSlides={slides} />
     </div>

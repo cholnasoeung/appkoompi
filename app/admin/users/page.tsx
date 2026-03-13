@@ -9,7 +9,7 @@ export default async function AdminUsersPage() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-[1.8rem] border border-slate-200 bg-[linear-gradient(135deg,_#78350f,_#d97706_52%,_#fffbeb)] p-6 text-white">
+      {/* <section className="rounded-[1.8rem] border border-slate-200 bg-[linear-gradient(135deg,_#78350f,_#d97706_52%,_#fffbeb)] p-6 text-white">
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-100">
           Users
         </p>
@@ -19,7 +19,7 @@ export default async function AdminUsersPage() {
         <p className="mt-3 max-w-2xl text-sm leading-6 text-amber-50">
           Manage customer and admin accounts, review contact details, and control role access.
         </p>
-      </section>
+      </section> */}
 
       <AdminUserManager initialUsers={users} />
     </div>
