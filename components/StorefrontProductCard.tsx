@@ -10,9 +10,11 @@ function formatPrice(price: number) {
 export default function StorefrontProductCard({
   product,
   compact = false,
+  showDescription = true,
 }: {
   product: StorefrontProduct;
   compact?: boolean;
+  showDescription?: boolean;
 }) {
   const activePrice = product.discountPrice ?? product.price;
   const hasDiscount = product.discountPrice !== null;
@@ -21,7 +23,7 @@ export default function StorefrontProductCard({
     : null;
 
   return (
-    <article className="group overflow-hidden bg-white transition hover:-translate-y-1">
+    <article className="group flex h-full flex-col overflow-hidden bg-white transition hover:-translate-y-1">
       <div className="relative overflow-hidden rounded-[1.4rem] bg-[#f3f3f3]">
         <div className="absolute left-3 top-3 z-10 flex flex-wrap gap-2">
           {discountPercent ? (
@@ -55,13 +57,22 @@ export default function StorefrontProductCard({
         </p>
       </div>
 
-      <div className={compact ? "space-y-3 px-1 pb-1 pt-3" : "space-y-4 px-1 pb-1 pt-4"}>
+      <div
+        className={
+          compact
+            ? "flex flex-1 flex-col space-y-3 px-1 pb-1 pt-3"
+            : "flex flex-1 flex-col space-y-4 px-1 pb-1 pt-4"
+        }
+      >
         <div className="flex items-start justify-between gap-3">
-          <div>
+          <div className="min-h-[5.5rem] flex-1">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
               {product.categoryName}
             </p>
-            <Link href={`/products/${product.slug}`} className="mt-1 block text-base font-semibold leading-6 text-black sm:text-lg">
+            <Link
+              href={`/products/${product.slug}`}
+              className="mt-1 block text-base font-semibold leading-6 text-black sm:text-lg"
+            >
               {product.name}
             </Link>
           </div>
@@ -76,9 +87,11 @@ export default function StorefrontProductCard({
           </button>
         </div>
 
-        <p className="text-sm leading-6 text-slate-600">
-          {compact ? product.shortDescription : product.description}
-        </p>
+        {showDescription ? (
+          <p className="min-h-12 text-sm leading-6 text-slate-600">
+            {compact ? product.shortDescription : product.description}
+          </p>
+        ) : null}
 
         <div className="flex items-center gap-2 text-sm">
           <p className="font-bold text-red-600">US {formatPrice(activePrice)}</p>
@@ -87,7 +100,8 @@ export default function StorefrontProductCard({
           ) : null}
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="min-h-[2rem]">
+          <div className="flex flex-wrap gap-2">
           {product.sizes.slice(0, 4).map((size) => (
             <span
               key={size}
@@ -96,11 +110,12 @@ export default function StorefrontProductCard({
               {size}
             </span>
           ))}
+          </div>
         </div>
 
         <Link
           href={`/products/${product.slug}`}
-          className="block w-full rounded-none bg-black px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-slate-800"
+          className="mt-auto block w-full rounded-none bg-black px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-slate-800"
         >
           View details
         </Link>

@@ -127,7 +127,12 @@ export default async function HomePage() {
 
         <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
           {featuredProducts.map((product) => (
-            <StorefrontProductCard key={product._id} product={product} compact />
+            <StorefrontProductCard
+              key={product._id}
+              product={product}
+              compact
+              showDescription={false}
+            />
           ))}
         </div>
       </section>
@@ -193,7 +198,7 @@ export default async function HomePage() {
 
         <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {latestProducts.map((product) => (
-            <StorefrontProductCard key={product._id} product={product} />
+            <StorefrontProductCard key={product._id} product={product} showDescription={false} />
           ))}
         </div>
       </section>
