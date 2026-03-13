@@ -88,6 +88,20 @@ export default async function AdminDashboardPage() {
           >
             Open products
           </Link>
+          <div className="mt-3 flex flex-wrap gap-3">
+            <Link
+              href="/admin/orders"
+              className="inline-flex rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              Open orders
+            </Link>
+            <Link
+              href="/admin/users"
+              className="inline-flex rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              Open users
+            </Link>
+          </div>
         </article>
       </section>
     </div>

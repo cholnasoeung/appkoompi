@@ -62,6 +62,16 @@ export type AdminOrderSummary = {
   placedAt: string;
 };
 
+export type AdminUserSummary = {
+  _id: string;
+  name: string;
+  email: string;
+  role: "customer" | "admin";
+  phone: string | null;
+  addressCount: number;
+  createdAt: string;
+};
+
 export async function requireAdminPageSession() {
   const configurationError = getAppConfigurationError();
 
@@ -270,4 +280,23 @@ export async function getAdminOrders(): Promise<AdminOrderSummary[]> {
           : new Date(order.placedAt).toISOString(),
     } satisfies AdminOrderSummary;
   });
+}
+
+export async function getAdminUsers(): Promise<AdminUserSummary[]> {
+  await connectToDatabase();
+
+  const users = await User.find({}).sort({ createdAt: -1 }).lean();
+
+  return users.map((user) => ({
+    _id: user._id.toString(),
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    phone: user.phone ?? null,
+    addressCount: Array.isArray(user.addresses) ? user.addresses.length : 0,
+    createdAt:
+      user.createdAt instanceof Date
+        ? user.createdAt.toISOString()
+        : new Date(user.createdAt).toISOString(),
+  }));
 }

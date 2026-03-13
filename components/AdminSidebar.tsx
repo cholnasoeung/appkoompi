@@ -19,6 +19,11 @@ const navigation = [
     label: "Orders",
     description: "Status updates and customer fulfillment",
   },
+  {
+    href: "/admin/users",
+    label: "Users",
+    description: "Roles, contact data, and account control",
+  },
 ];
 
 export default function AdminSidebar({
