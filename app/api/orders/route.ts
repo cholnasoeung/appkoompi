@@ -134,7 +134,8 @@ export async function POST(request: Request) {
     const taxAmount = Number((subtotal * 0.1).toFixed(2));
     const discountAmount = 0;
     const totalAmount = subtotal + shippingAmount + taxAmount - discountAmount;
-    const paymentStatus = paymentMethod === "cash-on-delivery" ? "pending" : "paid";
+    const isCashOnDelivery = paymentMethod === "cash-on-delivery";
+    const paymentStatus = "pending";
 
     const order = await Order.create({
       userId,
@@ -162,15 +163,12 @@ export async function POST(request: Request) {
       payment: {
         method: paymentMethod,
         status: paymentStatus,
-        transactionId:
-          paymentMethod === "card"
-            ? `CARD-${Date.now().toString().slice(-8)}`
-            : null,
+        transactionId: null,
       },
-      orderStatus: paymentMethod === "cash-on-delivery" ? "pending" : "confirmed",
+      orderStatus: isCashOnDelivery ? "pending" : "pending",
       notes: body.notes?.trim() || null,
       placedAt: new Date(),
-      paidAt: paymentStatus === "paid" ? new Date() : null,
+      paidAt: null,
     });
 
     for (const item of cart.items) {

@@ -20,16 +20,6 @@ type CheckoutClientProps = {
   defaultEmail: string;
 };
 
-const emptyAddress: AddressForm = {
-  fullName: "",
-  phone: "",
-  street: "",
-  city: "",
-  state: "",
-  postalCode: "",
-  country: "",
-};
-
 async function readJsonResponse(response: Response) {
   const text = await response.text();
 
@@ -58,13 +48,9 @@ export default function CheckoutClient({
   const [billingAddress, setBillingAddress] = useState<AddressForm>(defaultAddress);
   const [sameAsShipping, setSameAsShipping] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState("card");
-  const [cardholderName, setCardholderName] = useState(defaultAddress.fullName);
-  const [cardNumber, setCardNumber] = useState("");
-  const [expiryMonth, setExpiryMonth] = useState("");
-  const [expiryYear, setExpiryYear] = useState("");
-  const [cvv, setCvv] = useState("");
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const pricing = useMemo(() => {
@@ -99,6 +85,7 @@ export default function CheckoutClient({
 
   function placeOrder() {
     setError(null);
+    setStatusMessage(null);
 
     startTransition(async () => {
       const response = await fetch("/api/orders", {
@@ -111,11 +98,6 @@ export default function CheckoutClient({
           billingAddress: sameAsShipping ? shippingAddress : billingAddress,
           sameAsShipping,
           paymentMethod,
-          cardholderName,
-          cardNumber,
-          expiryMonth,
-          expiryYear,
-          cvv,
           notes,
         }),
       });
@@ -138,6 +120,47 @@ export default function CheckoutClient({
 
       if (!orderNumber) {
         setError("Order placed, but the response was invalid.");
+        return;
+      }
+
+      if (paymentMethod === "card") {
+        const paymentResponse = await fetch("/api/payment/checkout", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ orderNumber }),
+        });
+
+        const paymentData = await readJsonResponse(paymentResponse);
+
+        if (!paymentResponse.ok) {
+          setError(
+            typeof paymentData?.message === "string"
+              ? paymentData.message
+              : "Unable to start payment."
+          );
+          return;
+        }
+
+        const checkoutUrl =
+          paymentData &&
+          "checkoutUrl" in paymentData &&
+          typeof paymentData.checkoutUrl === "string"
+            ? paymentData.checkoutUrl
+            : null;
+
+        if (!checkoutUrl) {
+          setError("Payment started, but no checkout URL was returned.");
+          return;
+        }
+
+        setStatusMessage(
+          typeof paymentData?.message === "string"
+            ? paymentData.message
+            : "Redirecting to payment..."
+        );
+        window.location.href = checkoutUrl;
         return;
       }
 
@@ -240,7 +263,7 @@ export default function CheckoutClient({
                     : "rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700"
                 }
               >
-                Credit card
+                Pay online
               </button>
               <button
                 type="button"
@@ -256,37 +279,8 @@ export default function CheckoutClient({
             </div>
 
             {paymentMethod === "card" ? (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <input
-                  value={cardholderName}
-                  onChange={(event) => setCardholderName(event.target.value)}
-                  placeholder="Cardholder name"
-                  className="sm:col-span-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
-                />
-                <input
-                  value={cardNumber}
-                  onChange={(event) => setCardNumber(event.target.value)}
-                  placeholder="Card number"
-                  className="sm:col-span-2 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
-                />
-                <input
-                  value={expiryMonth}
-                  onChange={(event) => setExpiryMonth(event.target.value)}
-                  placeholder="Expiry month"
-                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
-                />
-                <input
-                  value={expiryYear}
-                  onChange={(event) => setExpiryYear(event.target.value)}
-                  placeholder="Expiry year"
-                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
-                />
-                <input
-                  value={cvv}
-                  onChange={(event) => setCvv(event.target.value)}
-                  placeholder="CVV"
-                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
-                />
+              <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-4 text-sm text-sky-900">
+                You will be redirected to Baray to complete payment. Customers can choose the bank or wallet options available on your Baray account, including QR-supported flows like ACLEDA, Sathapana, Wing, and KHQR if enabled.
               </div>
             ) : (
               <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -375,6 +369,12 @@ export default function CheckoutClient({
         {error ? (
           <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
             {error}
+          </div>
+        ) : null}
+
+        {statusMessage ? (
+          <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+            {statusMessage}
           </div>
         ) : null}
 
